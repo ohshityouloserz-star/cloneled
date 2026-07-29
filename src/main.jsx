@@ -890,3 +890,237 @@ export function StudyLedger() {
               </div>
             </div>
           </div>
+          {/* CALENDAR - BACKGROUND GRADIENT CHANGES PER MONTH */}
+          <div className="ghibli-card" style={{
+            width: "100%",
+            maxWidth: 380,
+            padding: 22,
+            margin: "20px 0",
+            boxSizing: "border-box",
+            background: MONTH_PASTEL_GRADIENTS[calendarView.getMonth()],
+            transition: "background 0.5s ease"
+          }}>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <button
+                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1))}
+                style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer", opacity: 0.7 }}
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              {/* MONTH TITLE CLICK OPENS MONTH GOALS MODAL */}
+              <button
+                onClick={() => setShowMonthGoalsModal(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: "#F7EBE8",
+                  cursor: "pointer",
+                  textDecoration: "underline text-decoration-color: rgba(255,255,255,0.3)"
+                }}
+                title="Click to view/add Goals for this Month"
+              >
+                {calendarView.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </button>
+
+              <button
+                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1))}
+                style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer", opacity: 0.7 }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, textAlign: "center", fontSize: 10, fontWeight: 700, opacity: 0.5, marginBottom: 10 }}>
+              <span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, position: "relative" }}>
+              {calendarDays.map((d, idx) => {
+                if (!d) return <div key={`pad-${idx}`} />;
+                const key = toKey(d);
+                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                const isPast = d < todayStart;
+                const isFuture = d > todayStart;
+                const isCrossed = crossedDates[key] || (isPast && crossedDates[key] !== false);
+                const isTodayDate = isSameDay(d, today);
+
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleCrossDate(d, key)}
+                    style={{
+                      aspectRatio: "1/1",
+                      background: isTodayDate ? activeThemeObj.accent : "rgba(255,255,255,0.08)",
+                      color: isTodayDate ? "#161521" : (isFuture ? "rgba(255,255,255,0.3)" : "#FFF"),
+                      border: isTodayDate ? "2px solid #FFF" : "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: 10,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: isFuture ? "default" : "pointer",
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0
+                    }}
+                  >
+                    {d.getDate()}
+                    {isCrossed && !isFuture && (
+                      <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#E86F88", fontSize: 16, fontWeight: 900 }}>✕</span>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div style={{ position: "absolute", bottom: 4, right: 8, opacity: 0.35, pointerEvents: "none", fontSize: 18 }}>
+                {MONTH_DOODLES[calendarView.getMonth()]}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ height: 10 }}></div>
+        </div>
+        {/* DASHBOARD SECTION */}
+        <div style={{
+          background: "rgba(20, 16, 28, 0.95)",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+          minHeight: "100vh",
+          padding: "40px 16px 80px",
+          boxShadow: "0px -10px 40px rgba(0,0,0,0.5)"
+        }}>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
+
+            {/* STREAK & METRICS */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+              <div className="ghibli-card" style={{ padding: 18, gridColumn: "span 2" }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Flame size={14} color="#E59866" /> STREAK
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 800, marginTop: 4, color: "#FFE885" }}>{streak}d</div>
+              </div>
+
+              <div className="ghibli-card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MAX PRODUCTIVITY 🐢</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#99E3B4", marginTop: 4 }}>{overall.maxProdDays}</div>
+                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>≥ 90% completed</div>
+              </div>
+
+              <div className="ghibli-card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>IN BETWEEN 🐧</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#F3C68F", marginTop: 4 }}>{overall.inBetweenDays}</div>
+                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>&gt; 50% &amp; &lt; 90%</div>
+              </div>
+
+              <div className="ghibli-card" style={{ padding: 16, gridColumn: "span 2" }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MIN PRODUCTIVITY 🐇</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#E86F88", marginTop: 4 }}>{overall.minProdDays}</div>
+                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>≤ 50% completed</div>
+              </div>
+            </div>
+            {/* PROGRESS BAR */}
+            <div className="ghibli-card" style={{ padding: 18, marginBottom: 20 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7, marginBottom: 24 }}>TODAY'S CLIMB</div>
+              <div style={{ position: "relative", height: 18, background: "rgba(12, 10, 18, 0.7)", borderRadius: 999, border: "1.5px solid rgba(255,255,255,0.15)", marginBottom: 28 }}>
+
+                <div style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${climberPct}%`,
+                  background: activeThemeObj.accent,
+                  borderRadius: 999,
+                  transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)"
+                }}>
+                  {climberPct === 100 ? (
+                    <div style={{ position: "absolute", right: -10, top: -16, fontSize: 22 }}>🚩</div>
+                  ) : (
+                    <div style={{ position: "absolute", right: -12, top: -16, fontSize: 22, zIndex: 2 }}>
+                      🧗🏻‍♀️
+                      <div style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "#FFE885",
+                        textAlign: "center",
+                        position: "absolute",
+                        top: 24,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        whiteSpace: "nowrap",
+                        textShadow: "0px 2px 4px rgba(0,0,0,0.9)"
+                      }}>
+                        {overall.rate}%
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {climberPct < 100 && (
+                  <div style={{ position: "absolute", right: 2, top: -16, fontSize: 22, opacity: 0.8, zIndex: 1 }}>🏔️</div>
+                )}
+              </div>
+            </div>
+            {/* LAST 7 DAYS */}
+            <div className="ghibli-card" style={{ padding: 18, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>LAST 7 DAYS</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => setSevenDaysAnchor((d) => addDays(d, -7))}
+                    style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#FFF", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => setSevenDaysAnchor((d) => addDays(d, 7))}
+                    style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#FFF", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(7, 1fr)",
+                gap: 8,
+                justifyContent: "center",
+                alignItems: "center"
+              }}>
+                {last7Days.map((d) => {
+                  const isSelected = d.key === viewKey;
+                  return (
+                    <button
+                      key={d.key}
+                      onClick={() => setViewDate(fromKey(d.key))}
+                      style={{
+                        background: isSelected ? "#FFF" : "rgba(32, 27, 44, 0.8)",
+                        color: isSelected ? "#161521" : "#FFF",
+                        border: isSelected ? "1px solid #FFF" : "1px solid rgba(255,255,255,0.12)",
+                        borderRadius: 12,
+                        aspectRatio: "1/1",
+                        width: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0
+                      }}
+                    >
+                      <span style={{ fontSize: 9, opacity: isSelected ? 0.8 : 0.5, marginBottom: 2 }}>
+                        {d.date.toLocaleDateString(undefined, { weekday: "narrow" })}
+                      </span>
+                      {d.date.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
