@@ -1,433 +1,486 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import ReactDOM from "react-dom/client";
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import {
-  Check, X, Plus, ChevronLeft, ChevronRight, Flame, Trash2, Clock, Maximize2,
-  Minimize2, Snowflake, Heart, Wind, Umbrella, Sun, Zap, Cloud, Feather, Coffee,
-  Moon, Star, Compass, Play, Pause, RotateCcw, Settings, Sparkles, Volume2, Award
-} from "lucide-react";
+  Sparkles,
+  Play,
+  Pause,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  Clock,
+  Plus,
+  Check,
+  X,
+  Trash2,
+  Maximize2,
+  Minimize2,
+  Music,
+  BookOpen,
+  Palette,
+  Upload,
+  FileText
+} from 'lucide-react';
 
-if (!window.storage) {
-  window.storage = {
-    get: async (key) => {
-      const val = localStorage.getItem(key);
-      return val !== null ? { value: val } : null;
-    },
-    set: async (key, val) => {
-      localStorage.setItem(key, val);
-    },
-    list: async (prefix) => {
-      const keys = Object.keys(localStorage).filter((k) => k.startsWith(prefix));
-      return { keys };
-    },
-  };
-}
+const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Quicksand:wght@500;700&display=swap');`;
 
-const FONT_IMPORT = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Dancing+Script:wght@600;700&family=Fredoka:wght@400;500;600&display=swap');
-`;
+// Dynamic Month Gradient Backgrounds for Calendar
+const MONTH_PASTEL_GRADIENTS = [
+  "linear-gradient(135deg, rgba(255, 209, 220, 0.25) 0%, rgba(255, 230, 240, 0.1) 100%)", // Jan
+  "linear-gradient(135deg, rgba(208, 224, 255, 0.25) 0%, rgba(230, 240, 255, 0.1) 100%)", // Feb
+  "linear-gradient(135deg, rgba(210, 245, 225, 0.25) 0%, rgba(235, 255, 242, 0.1) 100%)", // Mar
+  "linear-gradient(135deg, rgba(255, 224, 204, 0.25) 0%, rgba(255, 240, 230, 0.1) 100%)", // Apr
+  "linear-gradient(135deg, rgba(243, 207, 255, 0.25) 0%, rgba(250, 230, 255, 0.1) 100%)", // May
+  "linear-gradient(135deg, rgba(255, 250, 204, 0.25) 0%, rgba(255, 252, 230, 0.1) 100%)", // Jun
+  "linear-gradient(135deg, rgba(204, 245, 255, 0.25) 0%, rgba(230, 252, 255, 0.1) 100%)", // Jul
+  "linear-gradient(135deg, rgba(255, 218, 233, 0.25) 0%, rgba(255, 235, 245, 0.1) 100%)", // Aug
+  "linear-gradient(135deg, rgba(220, 237, 210, 0.25) 0%, rgba(238, 247, 232, 0.1) 100%)", // Sep
+  "linear-gradient(135deg, rgba(255, 230, 210, 0.25) 0%, rgba(255, 242, 232, 0.1) 100%)", // Oct
+  "linear-gradient(135deg, rgba(225, 215, 250, 0.25) 0%, rgba(240, 235, 255, 0.1) 100%)", // Nov
+  "linear-gradient(135deg, rgba(210, 235, 245, 0.25) 0%, rgba(232, 246, 252, 0.1) 100%)", // Dec
+];
 
-// Helper Web Audio API Chime (Ghibli Soft Sound)
-const playSoftChime = () => {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const frequencies = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-    
-    frequencies.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-      
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.7);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + i * 0.12);
-      osc.stop(ctx.currentTime + i * 0.12 + 0.75);
-    });
-  } catch (e) {
-    console.error("Audio playback error", e);
+const MONTH_DOODLES = ["❄️", "💗", "🌱", "🌸", "🌿", "☀️", "🏖️", "🌻", "🍁", "🎃", "🍂", "🎄"];
+// Themes Configuration
+const THEMES = {
+  ghibli: {
+    id: "ghibli",
+    name: "Cosmic Ghibli",
+    font: "'Plus Jakarta Sans', 'Fredoka', sans-serif",
+    bgImage: "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80')",
+    bgColor: "#1B1726",
+    cardBg: "rgba(42, 34, 58, 0.55)",
+    cardBorder: "rgba(255, 235, 245, 0.2)",
+    accent: "#F2C6DE",
+    textColor: "#F3EFF8",
+  },
+  cat: {
+    id: "cat",
+    name: "Warm Cat 🐾",
+    font: "'Fredoka', 'Quicksand', sans-serif",
+    bgImage: "none",
+    bgColor: "#2C221E",
+    cardBg: "rgba(68, 52, 45, 0.65)",
+    cardBorder: "rgba(247, 202, 179, 0.25)",
+    accent: "#F7C6B3",
+    textColor: "#FAF0CA",
+  },
+  butterfly: {
+    id: "butterfly",
+    name: "Fairy Butterfly 🦋",
+    font: "'Quicksand', sans-serif",
+    bgImage: "none",
+    bgColor: "#1E1A2B",
+    cardBg: "rgba(48, 40, 72, 0.6)",
+    cardBorder: "rgba(215, 185, 255, 0.25)",
+    accent: "#D7B9FF",
+    textColor: "#F5EEFF",
+  },
+  raining: {
+    id: "raining",
+    name: "Cozy Rain 🌧️",
+    font: "'Plus Jakarta Sans', sans-serif",
+    bgImage: "none",
+    bgColor: "#121A21",
+    cardBg: "rgba(26, 38, 48, 0.65)",
+    cardBorder: "rgba(160, 210, 235, 0.25)",
+    accent: "#9CD5EC",
+    textColor: "#E6F4F8",
   }
 };
 
-function toKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+const TIME_OPTIONS_12H = (() => {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const period = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      const mm = m === 0 ? '00' : '30';
+      times.push(`${h12}:${mm} ${period}`);
+    }
+  }
+  return times;
+})();
+
+function toKey(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
-function fromKey(key) {
-  const [y, m, d] = key.split("-").map(Number);
+
+function fromKey(k) {
+  const [y, m, d] = k.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
+
+function addDays(d, n) {
+  const res = new Date(d);
+  res.setDate(res.getDate() + n);
+  return res;
 }
+
 function isSameDay(a, b) {
-  return toKey(a) === toKey(b);
-}
-function dayLabel(date) {
-  return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-}
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 }
 
-const TIME_OPTIONS_12H = [];
-for (let i = 0; i < 24; i++) {
-  for (let j = 0; j < 60; j += 30) {
-    const hour12 = i % 12 === 0 ? 12 : i % 12;
-    const ampm = i < 12 ? "AM" : "PM";
-    const mm = String(j).padStart(2, "0");
-    const hh = String(hour12).padStart(2, "0");
-    TIME_OPTIONS_12H.push(`${hh}:${mm} ${ampm}`);
-  }
+function formatLiveClock(d) {
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-const MONTH_DOODLES = [
-  <Snowflake size={18} strokeWidth={1.5} />,
-  <Heart size={18} strokeWidth={1.5} />,
-  <Wind size={18} strokeWidth={1.5} />,
-  <Umbrella size={18} strokeWidth={1.5} />,
-  <Sun size={18} strokeWidth={1.5} />,
-  <Zap size={18} strokeWidth={1.5} />,
-  <Cloud size={18} strokeWidth={1.5} />,
-  <Feather size={18} strokeWidth={1.5} />,
-  <Coffee size={18} strokeWidth={1.5} />,
-  <Moon size={18} strokeWidth={1.5} />,
-  <Star size={18} strokeWidth={1.5} />,
-  <Compass size={18} strokeWidth={1.5} />
-];
-function StudyLedger() {
-  const [viewDate, setViewDate] = useState(new Date());
-  const [targetsByDay, setTargetsByDay] = useState({});
-  const [notes, setNotes] = useState("");
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [crossedDates, setCrossedDates] = useState({});
-  const [newTaskText, setNewTaskText] = useState("");
-  const [newStart, setNewStart] = useState("");
-  const [newEnd, setNewEnd] = useState("");
+function formatPomoTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function dayLabel(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+export function StudyLedger() {
+  const today = new Date();
+  const todayKey = toKey(today);
+
+  // Core State
+  const [viewDate, setViewDate] = useState(today);
+  const viewKey = toKey(viewDate);
+  const isToday = isSameDay(viewDate, today);
+
   const [now, setNow] = useState(new Date());
+  const [tasksByDate, setTasksByDate] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_tasks') || '{}'); } catch { return {}; }
+  });
+  const [crossedDates, setCrossedDates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_crossed') || '{}'); } catch { return {}; }
+  });
+  const [jaapData, setJaapData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_jaap') || '{}'); } catch { return {}; }
+  });
+  const [notes, setNotes] = useState(() => localStorage.getItem('mori_notes') || '');
 
-  // NAAM JAAP STATE
+  // Month Goals
+  const [monthGoals, setMonthGoals] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_month_goals') || '{}'); } catch { return {}; }
+  });
+
+  // Books / PDF Tracker
+  const [books, setBooks] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_books') || '[]'); } catch { return []; }
+  });
+
+  // Theme State
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('mori_theme') || 'ghibli');
+  // Input States
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newStart, setNewStart] = useState('');
+  const [newEnd, setNewEnd] = useState('');
+
+  // Calendar View
+  const [calendarView, setCalendarView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  // 7-day strip
+  const [sevenDaysAnchor, setSevenDaysAnchor] = useState(today);
+
+  // Modals
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const [showJaapModal, setShowJaapModal] = useState(false);
-  const [jaapData, setJaapData] = useState({});
+  const [showMonthGoalsModal, setShowMonthGoalsModal] = useState(false);
+  const [showMusicModal, setShowMusicModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showBooksModal, setShowBooksModal] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
 
-  // Last 7 Days Anchor Date State
-  const [sevenDaysAnchor, setSevenDaysAnchor] = useState(new Date());
-
-  // Pomodoro Timer State
-  const [timerType, setTimerType] = useState("focus");
+  // Pomodoro
+  const [timerType, setTimerType] = useState('focus'); // 'focus' | 'break'
   const [focusHours, setFocusHours] = useState(0);
   const [focusMins, setFocusMins] = useState(25);
   const [breakHours, setBreakHours] = useState(0);
   const [breakMins, setBreakMins] = useState(5);
-
   const [pomoTime, setPomoTime] = useState(25 * 60);
   const [pomoActive, setPomoActive] = useState(false);
 
-  // Calendar View State
-  const [calendarView, setCalendarView] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  // Music Player
+  const [playlist, setPlaylist] = useState([]);
+  const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const audioRef = useRef(null);
 
+  // New Month Goal Input
+  const [newGoalText, setNewGoalText] = useState('');
+
+  // Save Persistence
+  useEffect(() => localStorage.setItem('mori_tasks', JSON.stringify(tasksByDate)), [tasksByDate]);
+  useEffect(() => localStorage.setItem('mori_crossed', JSON.stringify(crossedDates)), [crossedDates]);
+  useEffect(() => localStorage.setItem('mori_jaap', JSON.stringify(jaapData)), [jaapData]);
+  useEffect(() => localStorage.setItem('mori_month_goals', JSON.stringify(monthGoals)), [monthGoals]);
+  useEffect(() => localStorage.setItem('mori_books', JSON.stringify(books)), [books]);
+  useEffect(() => localStorage.setItem('mori_theme', currentTheme), [currentTheme]);
+
+  // Live Clock
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const triggerVibrationAndChime = () => {
-    playSoftChime();
-    if (typeof window !== "undefined" && "navigator" in window && navigator.vibrate) {
-      navigator.vibrate([300, 150, 300, 150, 500]);
+  // Pomodoro Timer
+  useEffect(() => {
+    let interval = null;
+    if (pomoActive && pomoTime > 0) {
+      interval = setInterval(() => setPomoTime((t) => t - 1), 1000);
+    } else if (pomoTime === 0) {
+      setPomoActive(false);
     }
+    return () => clearInterval(interval);
+  }, [pomoActive, pomoTime]);
+  // Streak Logic:
+  // If no tasks exist for today, streak falls back to 0.
+  // Otherwise, counts all distinct logged days.
+  const calculateStreak = () => {
+    const loggedKeys = Object.keys(tasksByDate).filter(key => tasksByDate[key] && tasksByDate[key].length > 0);
+    if (loggedKeys.length === 0) return 0;
+
+    const hasTodayTasks = tasksByDate[todayKey] && tasksByDate[todayKey].length > 0;
+    if (!hasTodayTasks) return 0;
+
+    const sortedKeys = Array.from(new Set(loggedKeys)).sort();
+    return sortedKeys.length;
   };
 
-  useEffect(() => {
-    let timer = null;
-    if (pomoActive && pomoTime > 0) {
-      timer = setInterval(() => setPomoTime((prev) => prev - 1), 1000);
-    } else if (pomoTime === 0 && pomoActive) {
-      setPomoActive(false);
-      triggerVibrationAndChime();
-    }
-    return () => clearInterval(timer);
-  }, [pomoActive, pomoTime]);
+  const streak = calculateStreak();
 
-  const switchTimerMode = (type) => {
-    setTimerType(type);
-    setPomoActive(false);
-    if (type === "focus") {
-      const sec = (parseInt(focusHours || 0, 10) * 3600) + (parseInt(focusMins || 0, 10) * 60);
-      setPomoTime(sec);
-    } else {
-      const sec = (parseInt(breakHours || 0, 10) * 3600) + (parseInt(breakMins || 0, 10) * 60);
-      setPomoTime(sec);
+  // Metrics
+  const calculateMetrics = () => {
+    let totalTasks = 0;
+    let totalAchieved = 0;
+    let maxProdDays = 0;
+    let minProdDays = 0;
+    let inBetweenDays = 0;
+
+    Object.keys(tasksByDate).forEach((key) => {
+      const dayTasks = tasksByDate[key] || [];
+      if (dayTasks.length > 0) {
+        const achieved = dayTasks.filter((t) => t.status === 'achieved').length;
+        const rate = achieved / dayTasks.length;
+        if (rate >= 0.9) maxProdDays++;
+        else if (rate <= 0.5) minProdDays++;
+        else inBetweenDays++;
+      }
+    });
+
+    const currentTasks = tasksByDate[viewKey] || [];
+    if (currentTasks.length > 0) {
+      totalTasks = currentTasks.length;
+      totalAchieved = currentTasks.filter((t) => t.status === 'achieved').length;
     }
+
+    const rate = totalTasks > 0 ? Math.round((totalAchieved / totalTasks) * 100) : 0;
+    return { totalTasks, totalAchieved, rate, maxProdDays, minProdDays, inBetweenDays };
+  };
+
+  const overall = calculateMetrics();
+  const climberPct = overall.rate;
+  // Task Actions
+  const currentTasks = tasksByDate[viewKey] || [];
+
+  const addTask = () => {
+    if (!newTaskText.trim()) return;
+    const newTask = {
+      id: Date.now().toString(),
+      text: newTaskText.trim(),
+      start: newStart,
+      end: newEnd,
+      status: 'pending'
+    };
+    setTasksByDate((prev) => ({
+      ...prev,
+      [viewKey]: [...(prev[viewKey] || []), newTask]
+    }));
+    setNewTaskText('');
+    setNewStart('');
+    setNewEnd('');
+  };
+
+  const setStatus = (id, status) => {
+    setTasksByDate((prev) => {
+      const list = prev[viewKey] || [];
+      const updated = list.map((t) => (t.id === id ? { ...t, status: t.status === status ? 'pending' : status } : t));
+      return { ...prev, [viewKey]: updated };
+    });
+  };
+
+  const removeTask = (id) => {
+    setTasksByDate((prev) => ({
+      ...prev,
+      [viewKey]: (prev[viewKey] || []).filter((t) => t.id !== id)
+    }));
+  };
+
+  const handleCrossDate = (d, key) => {
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (d > todayStart) return;
+    setCrossedDates((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const addJaapCount = (amt) => {
+    setJaapData((prev) => ({
+      ...prev,
+      [todayKey]: Math.max(0, (prev[todayKey] || 0) + amt)
+    }));
+  };
+
+  // Switch Timer Mode
+  const switchTimerMode = (mode) => {
+    setTimerType(mode);
+    setPomoActive(false);
+    if (mode === 'focus') setPomoTime((focusHours * 60 + focusMins) * 60);
+    else setPomoTime((breakHours * 60 + breakMins) * 60);
   };
 
   const updateFocusTime = (h, m) => {
     setFocusHours(h);
     setFocusMins(m);
-    if (timerType === "focus") {
-      const sec = (parseInt(h || 0, 10) * 3600) + (parseInt(m || 0, 10) * 60);
-      setPomoTime(sec);
-      setPomoActive(false);
-    }
+    if (timerType === 'focus') { setPomoActive(false); setPomoTime((h * 60 + m) * 60); }
   };
 
   const updateBreakTime = (h, m) => {
     setBreakHours(h);
     setBreakMins(m);
-    if (timerType === "break") {
-      const sec = (parseInt(h || 0, 10) * 3600) + (parseInt(m || 0, 10) * 60);
-      setPomoTime(sec);
-      setPomoActive(false);
+    if (timerType === 'break') { setPomoActive(false); setPomoTime((h * 60 + m) * 60); }
+  };
+  // Calendar Construction
+  const year = calendarView.getFullYear();
+  const month = calendarView.getMonth();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(new Date(year, month, d));
+
+  // 7 Days Navigation
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(sevenDaysAnchor, -i);
+    last7Days.push({ date: d, key: toKey(d) });
+  }
+
+  // Month Goals Actions
+  const currentMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const currentMonthGoals = monthGoals[currentMonthKey] || [];
+
+  const addMonthGoal = () => {
+    if (!newGoalText.trim()) return;
+    const item = { id: Date.now().toString(), text: newGoalText.trim(), done: false };
+    setMonthGoals((prev) => ({
+      ...prev,
+      [currentMonthKey]: [...(prev[currentMonthKey] || []), item]
+    }));
+    setNewGoalText('');
+  };
+
+  const toggleMonthGoal = (id) => {
+    setMonthGoals((prev) => ({
+      ...prev,
+      [currentMonthKey]: (prev[currentMonthKey] || []).map((g) => g.id === id ? { ...g, done: !g.done } : g)
+    }));
+  };
+
+  const deleteMonthGoal = (id) => {
+    setMonthGoals((prev) => ({
+      ...prev,
+      [currentMonthKey]: (prev[currentMonthKey] || []).filter((g) => g.id !== id)
+    }));
+  };
+
+  // Audio Upload & Navigation
+  const handleAudioUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newTracks = files.map((file) => ({
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      url: URL.createObjectURL(file)
+    }));
+    setPlaylist((prev) => [...prev, ...newTracks]);
+  };
+
+  const togglePlayMusic = () => {
+    if (!audioRef.current || playlist.length === 0) return;
+    if (isPlayingMusic) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
     }
+    setIsPlayingMusic(!isPlayingMusic);
   };
 
-  const formatPomoTime = (totalSec) => {
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) {
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const nextTrack = () => {
+    if (playlist.length === 0) return;
+    const nextIdx = (currentTrackIdx + 1) % playlist.length;
+    setCurrentTrackIdx(nextIdx);
+    setIsPlayingMusic(true);
   };
 
-  const formatLiveClock = (date) => {
-    return date.toLocaleTimeString(undefined, {
-      hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true
-    });
+  const prevTrack = () => {
+    if (playlist.length === 0) return;
+    const prevIdx = (currentTrackIdx - 1 + playlist.length) % playlist.length;
+    setCurrentTrackIdx(prevIdx);
+    setIsPlayingMusic(true);
   };
 
-  const today = useMemo(() => new Date(), [now.toDateString()]);
-  const viewKey = toKey(viewDate);
-  const todayKey = toKey(today);
-  const isToday = isSameDay(viewDate, today);
-
-  // Load Saved Data
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const notesRes = await window.storage.get("notes").catch(() => null);
-        if (!cancelled && notesRes && typeof notesRes.value === "string") setNotes(notesRes.value);
-      } catch (e) {}
-      try {
-        const crossedRes = await window.storage.get("crossed-dates").catch(() => null);
-        if (!cancelled && crossedRes && crossedRes.value) setCrossedDates(JSON.parse(crossedRes.value));
-      } catch (e) {}
-      try {
-        const jaapRes = await window.storage.get("naam-jaap-data").catch(() => null);
-        if (!cancelled && jaapRes && jaapRes.value) setJaapData(JSON.parse(jaapRes.value));
-      } catch (e) {}
-      try {
-        const listRes = await window.storage.list("targets:").catch(() => null);
-        if (listRes && listRes.keys && listRes.keys.length) {
-          const entries = await Promise.all(
-            listRes.keys.map(async (k) => {
-              try {
-                const r = await window.storage.get(k);
-                return [k.replace("targets:", ""), r ? JSON.parse(r.value) : []];
-              } catch {
-                return [k.replace("targets:", ""), []];
-              }
-            })
-          );
-          if (!cancelled) {
-            const map = {};
-            entries.forEach(([day, val]) => { map[day] = val; });
-            setTargetsByDay(map);
-          }
-        }
-      } catch (e) {}
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  const saveDay = useCallback(async (key, tasks) => {
-    try { await window.storage.set(`targets:${key}`, JSON.stringify(tasks)); } catch (e) {}
-  }, []);
-
-  const saveNotes = useCallback(async (text) => {
-    try { await window.storage.set("notes", text); } catch (e) {}
-  }, []);
-
-  const saveJaap = useCallback(async (data) => {
-    try { await window.storage.set("naam-jaap-data", JSON.stringify(data)); } catch (e) {}
-  }, []);
-
-  const addJaapCount = (amount = 1) => {
-    setJaapData((prev) => {
-      const current = prev[todayKey] || 0;
-      const updated = { ...prev, [todayKey]: Math.max(0, current + amount) };
-      saveJaap(updated);
-      return updated;
-    });
-    if (navigator.vibrate) navigator.vibrate(25);
+  // Book / PDF Upload
+  const handlePdfUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newBooks = files.map((file) => ({
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+      title: file.name.replace(/\.[^/.]+$/, ""),
+      url: URL.createObjectURL(file),
+      currentPage: 0,
+      totalPages: 100
+    }));
+    setBooks((prev) => [...prev, ...newBooks]);
   };
 
-  const handleCrossDate = useCallback((date, key) => {
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    if (date > todayStart) return;
-    setCrossedDates((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      window.storage.set("crossed-dates", JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, [today]);
-
-  const currentTasks = targetsByDay[viewKey] || [];
-
-  function updateDay(key, updater) {
-    setTargetsByDay((prev) => {
-      const next = { ...prev, [key]: updater(prev[key] || []) };
-      saveDay(key, next[key]);
-      return next;
-    });
-  }
-
-  function addTask() {
-    const text = newTaskText.trim();
-    if (!text) return;
-    updateDay(viewKey, (tasks) => [
-      ...tasks,
-      { id: uid(), text, status: "pending", start: newStart || null, end: newEnd || null },
-    ]);
-    setNewTaskText("");
-    setNewStart("");
-    setNewEnd("");
-  }
-
-  function setStatus(id, status) {
-    updateDay(viewKey, (tasks) =>
-      tasks.map((t) => (t.id === id ? { ...t, status: t.status === status ? "pending" : status } : t))
-    );
-  }
-
-  function removeTask(id) {
-    updateDay(viewKey, (tasks) => tasks.filter((t) => t.id !== id));
-  }
-
-  // Dynamic Streak Logic
-  const streak = useMemo(() => {
-    let count = 0;
-    let cursor = new Date(today);
-    for (let i = 0; i < 3650; i++) {
-      const key = toKey(cursor);
-      const tasks = targetsByDay[key];
-      if (tasks && tasks.length > 0) {
-        count += 1;
-      } else {
-        if (isSameDay(cursor, today)) {
-          count += 1;
-        } else {
-          break;
-        }
+  const updateBookPages = (id, delta) => {
+    setBooks((prev) => prev.map((b) => {
+      if (b.id === id) {
+        const nextPg = Math.max(0, b.currentPage + delta);
+        return { ...b, currentPage: nextPg };
       }
-      cursor = addDays(cursor, -1);
-    }
-    return count;
-  }, [targetsByDay, today]);
+      return b;
+    }));
+  };
 
-  // Last 7 Days Array
-  const last7Days = useMemo(() => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = addDays(sevenDaysAnchor, -i);
-      const key = toKey(d);
-      days.push({ key, date: d });
-    }
-    return days;
-  }, [sevenDaysAnchor]);
+  const updateBookTotalPages = (id, total) => {
+    setBooks((prev) => prev.map((b) => b.id === id ? { ...b, totalPages: Math.max(1, total) } : b));
+  };
 
-  // Naam Jaap Weekly Stats Calculation
-  const jaapStats = useMemo(() => {
-    let weekTotal = 0;
-    const weekDays = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = addDays(today, -i);
-      const k = toKey(d);
-      const count = jaapData[k] || 0;
-      weekTotal += count;
-      weekDays.push({ key: k, dayLabel: d.toLocaleDateString(undefined, { weekday: "narrow" }), count });
-    }
-    const maxDayCount = Math.max(...weekDays.map((w) => w.count), 1);
-    const totalAllTime = Object.values(jaapData).reduce((a, b) => a + b, 0);
-    const avgPerDay = Math.round(weekTotal / 7);
-
-    return { weekTotal, weekDays, maxDayCount, totalAllTime, avgPerDay };
-  }, [jaapData, today]);
-
-  const overall = useMemo(() => {
-    let maxProdDays = 0, inBetweenDays = 0, minProdDays = 0;
-    Object.entries(targetsByDay).forEach(([key, tasks]) => {
-      if (!tasks || tasks.length === 0) return;
-      if (fromKey(key) > today) return;
-      const dayTotal = tasks.length;
-      const dayAchieved = tasks.filter((t) => t.status === "achieved").length;
-      const rate = dayTotal > 0 ? (dayAchieved / dayTotal) * 100 : 0;
-      if (rate >= 90) maxProdDays += 1;
-      else if (rate > 50 && rate < 90) inBetweenDays += 1;
-      else if (rate <= 50) minProdDays += 1;
-    });
-
-    const activeTasks = targetsByDay[viewKey] || [];
-    const todayTotal = activeTasks.length;
-    const todayAchieved = activeTasks.filter((t) => t.status === "achieved").length;
-    const todayRate = todayTotal > 0 ? Math.round((todayAchieved / todayTotal) * 100) : 0;
-
-    return { rate: todayRate, maxProdDays, inBetweenDays, minProdDays };
-  }, [targetsByDay, today, viewKey]);
-
-  const climberPct = Math.min(100, Math.max(0, overall.rate));
-
-  const calendarDays = useMemo(() => {
-    const startOfMonth = new Date(calendarView.getFullYear(), calendarView.getMonth(), 1);
-    const endOfMonth = new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 0);
-    const days = [];
-    const startDayOfWeek = startOfMonth.getDay();
-    for (let i = 0; i < startDayOfWeek; i++) days.push(null);
-    for (let d = 1; d <= endOfMonth.getDate(); d++) {
-      days.push(new Date(calendarView.getFullYear(), calendarView.getMonth(), d));
-    }
-    return days;
-  }, [calendarView]);
+  const activeThemeObj = THEMES[currentTheme] || THEMES.ghibli;
   return (
     <div style={{
-      fontFamily: "'Plus Jakarta Sans', 'Fredoka', sans-serif",
-      backgroundColor: "#1B1726",
+      fontFamily: activeThemeObj.font,
+      backgroundColor: activeThemeObj.bgColor,
       minHeight: "100vh",
-      color: "#F3EFF8",
+      color: activeThemeObj.textColor,
       position: "relative",
       overflowX: "hidden",
+      transition: "background-color 0.4s ease, color 0.4s ease"
     }}>
       <style>{`
         ${FONT_IMPORT}
-        body { margin: 0; padding: 0; background: #1B1726; }
+        body { margin: 0; padding: 0; background: ${activeThemeObj.bgColor}; }
         
         .ghibli-card {
-          background: rgba(42, 34, 58, 0.55);
-          border: 1.5px solid rgba(255, 235, 245, 0.2);
+          background: ${activeThemeObj.cardBg};
+          border: 1.5px solid ${activeThemeObj.cardBorder};
           border-radius: 28px;
           box-shadow: 0px 16px 36px rgba(0, 0, 0, 0.35);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .ghibli-card-soft {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 24px;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
         }
         .ghibli-btn {
           border: none;
@@ -440,9 +493,49 @@ function StudyLedger() {
         .ghibli-btn:active {
           transform: scale(0.94);
         }
+        
+        /* Pulse Animation for Live Clock */
+        @keyframes clockAura {
+          0% { box-shadow: 0 0 10px ${activeThemeObj.accent}40, 0 0 20px ${activeThemeObj.accent}20; }
+          50% { box-shadow: 0 0 22px ${activeThemeObj.accent}90, 0 0 32px ${activeThemeObj.accent}50; }
+          100% { box-shadow: 0 0 10px ${activeThemeObj.accent}40, 0 0 20px ${activeThemeObj.accent}20; }
+        }
+        .live-clock-badge {
+          animation: clockAura 2.8s infinite ease-in-out;
+          border: 1.5px solid ${activeThemeObj.accent};
+        }
+
+        /* Falling Confetti Animation */
+        @keyframes confettiFall {
+          0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti-piece {
+          position: fixed;
+          top: -20px;
+          z-index: 9999;
+          pointer-events: none;
+          animation: confettiFall 3.5s linear infinite;
+        }
+
+        /* Rain Animation */
+        @keyframes rainDrop {
+          0% { transform: translateY(-100px); opacity: 0.8; }
+          100% { transform: translateY(100vh); opacity: 0.2; }
+        }
+        .rain-line {
+          position: fixed;
+          background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 100%);
+          width: 1.5px;
+          height: 50px;
+          pointer-events: none;
+          z-index: 1;
+          animation: rainDrop 1.2s linear infinite;
+        }
+
         .jaap-ring-btn {
-          width: 170px;
-          height: 170px;
+          width: 160px;
+          height: 160px;
           border-radius: 50%;
           background: radial-gradient(circle, #F7C5CC 0%, #E898AC 60%, #C4728A 100%);
           border: 6px solid rgba(255, 255, 255, 0.6);
@@ -453,12 +546,7 @@ function StudyLedger() {
           justify-content: center;
           color: #1A1221;
           cursor: pointer;
-          transition: transform 0.1s ease, box-shadow 0.15s ease;
           user-select: none;
-        }
-        .jaap-ring-btn:active {
-          transform: scale(0.92);
-          box-shadow: 0px 6px 16px rgba(232, 152, 172, 0.3);
         }
         .kw-input {
           background: rgba(24, 20, 34, 0.85);
@@ -490,13 +578,30 @@ function StudyLedger() {
         }
       `}</style>
 
-      {/* Dreamy Soft Background */}
+      {/* RAIN ANIMATION OVERLAY FOR RAIN THEME */}
+      {currentTheme === 'raining' && (
+        <>
+          {[...Array(30)].map((_, i) => (
+            <div
+              key={`rain-${i}`}
+              className="rain-line"
+              style={{
+                left: `${(i * 3.4) % 100}%`,
+                animationDelay: `${(i * 0.17) % 1.2}s`,
+                animationDuration: `${0.8 + (i % 5) * 0.15}s`
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* DYNAMIC BACKGROUND */}
       <div style={{
         position: "fixed",
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        backgroundImage: "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80')",
+        backgroundImage: activeThemeObj.bgImage,
         backgroundSize: "cover",
         backgroundPosition: "center",
         filter: "brightness(0.75) saturate(1.1)",
@@ -504,58 +609,111 @@ function StudyLedger() {
         <div style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(180deg, rgba(38, 28, 52, 0.35) 0%, rgba(25, 18, 36, 0.65) 50%, rgba(18, 14, 26, 0.96) 100%)",
+          background: `linear-gradient(180deg, ${activeThemeObj.bgColor}55 0%, ${activeThemeObj.bgColor}dd 100%)`,
         }} />
       </div>
+      <div style={{ position: "relative", zIndex: 2 }}>
 
-      <div style={{ position: "relative", zIndex: 1 }}>
-
-        {/* HERO / TIMER SECTION */}
+        {/* TOP NAVBAR / UTILITIES */}
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "24px 16px 40px", boxSizing: "border-box" }}>
 
-          {/* TOP BAR WITH NAAM JAAP BUTTON */}
-          <div style={{ width: "100%", maxWidth: 460, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{
-              background: "rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,255,255,0.22)",
+          <div style={{ width: "100%", maxWidth: 480, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+
+            {/* LIVE CLOCK WITH AESTHETIC PULSE AURA */}
+            <div className="live-clock-badge" style={{
+              background: "rgba(0,0,0,0.35)",
               borderRadius: 20,
               padding: "6px 16px",
               fontSize: 13,
               fontWeight: 700,
-              color: "#F2C6DE",
-              backdropFilter: "blur(8px)"
+              color: activeThemeObj.accent,
+              backdropFilter: "blur(12px)",
+              letterSpacing: "0.05em"
             }}>
               {formatLiveClock(now)}
             </div>
 
-            <button
-              onClick={() => setShowJaapModal(true)}
-              className="ghibli-btn"
-              style={{
-                background: "linear-gradient(135deg, #F7C5CC 0%, #D2C4FB 100%)",
-                color: "#1B1726",
-                padding: "8px 16px",
-                fontSize: 12,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                boxShadow: "0px 4px 16px rgba(247, 197, 204, 0.3)"
-              }}
-            >
-              <Sparkles size={14} color="#1B1726" /> Naam Jaap ({jaapData[todayKey] || 0})
-            </button>
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* TOP BAR NAAM JAAP BUTTON - ONLY SPARKLES SYMBOL & COUNT */}
+              <button
+                onClick={() => setShowJaapModal(true)}
+                className="ghibli-btn"
+                style={{
+                  background: `linear-gradient(135deg, ${activeThemeObj.accent} 0%, #D2C4FB 100%)`,
+                  color: "#1B1726",
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: "0px 4px 16px rgba(0,0,0,0.3)"
+                }}
+              >
+                <Sparkles size={15} color="#1B1726" /> ({jaapData[todayKey] || 0})
+              </button>
 
-          {/* TIMER CARD */}
+              {/* MUSIC PLAYER BUTTON */}
+              <button
+                onClick={() => setShowMusicModal(true)}
+                className="ghibli-btn"
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#FFF",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <Music size={15} />
+              </button>
+
+              {/* BOOKS BUTTON */}
+              <button
+                onClick={() => setShowBooksModal(true)}
+                className="ghibli-btn"
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#FFF",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <BookOpen size={15} />
+              </button>
+
+              {/* THEME SWITCHER BUTTON */}
+              <button
+                onClick={() => setShowThemeModal(true)}
+                className="ghibli-btn"
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "#FFF",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <Palette size={15} />
+              </button>
+            </div>
+          </div>
+          {/* TIMER CARD (TRANSPARENT BACKDROP REMOVED) */}
           <div style={{ width: "100%", maxWidth: 460 }}>
-            <div className="ghibli-card-soft" style={{ width: "100%", padding: "20px 20px", textAlign: "center", boxSizing: "border-box" }}>
+            <div style={{ width: "100%", padding: "20px 20px", textAlign: "center", boxSizing: "border-box" }}>
 
               <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 14 }}>
                 <button
                   onClick={() => switchTimerMode("focus")}
                   className="ghibli-btn"
                   style={{
-                    background: timerType === "focus" ? "#F2C6DE" : "rgba(0,0,0,0.25)",
+                    background: timerType === "focus" ? activeThemeObj.accent : "rgba(0,0,0,0.25)",
                     color: timerType === "focus" ? "#161521" : "#FFF",
                     border: "1px solid rgba(255,255,255,0.2)",
                     padding: "7px 18px",
@@ -622,7 +780,7 @@ function StudyLedger() {
                   onClick={() => setPomoActive(!pomoActive)}
                   className="ghibli-btn"
                   style={{
-                    background: timerType === "focus" ? "#F2C6DE" : "#99E3B4",
+                    background: timerType === "focus" ? activeThemeObj.accent : "#99E3B4",
                     color: "#161521",
                     width: 48,
                     height: 48,
@@ -654,23 +812,45 @@ function StudyLedger() {
             </div>
           </div>
 
-          {/* CALENDAR */}
-          <div className="ghibli-card" style={{ width: "100%", maxWidth: 360, padding: 22, margin: "20px 0", boxSizing: "border-box" }}>
+          {/* CALENDAR - BACKGROUND GRADIENT CHANGES PER MONTH */}
+          <div className="ghibli-card" style={{
+            width: "100%",
+            maxWidth: 380,
+            padding: 22,
+            margin: "20px 0",
+            boxSizing: "border-box",
+            background: MONTH_PASTEL_GRADIENTS[calendarView.getMonth()],
+            transition: "background 0.5s ease"
+          }}>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <button 
-                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1))} 
+              <button
+                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1))}
                 style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer", opacity: 0.7 }}
               >
                 <ChevronLeft size={20} />
               </button>
 
-              <div style={{ fontFamily: "'Dancing Script', cursive", fontSize: 28, fontWeight: 700, color: "#F7EBE8" }}>
+              {/* MONTH TITLE CLICK OPENS MONTH GOALS MODAL */}
+              <button
+                onClick={() => setShowMonthGoalsModal(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: "#F7EBE8",
+                  cursor: "pointer",
+                  textDecoration: "underline text-decoration-color: rgba(255,255,255,0.3)"
+                }}
+                title="Click to view/add Goals for this Month"
+              >
                 {calendarView.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </div>
+              </button>
 
-              <button 
-                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1))} 
+              <button
+                onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1))}
                 style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer", opacity: 0.7 }}
               >
                 <ChevronRight size={20} />
@@ -697,9 +877,9 @@ function StudyLedger() {
                     onClick={() => handleCrossDate(d, key)}
                     style={{
                       aspectRatio: "1/1",
-                      background: isTodayDate ? "#F2C6DE" : "rgba(255,255,255,0.06)",
+                      background: isTodayDate ? activeThemeObj.accent : "rgba(255,255,255,0.08)",
                       color: isTodayDate ? "#161521" : (isFuture ? "rgba(255,255,255,0.3)" : "#FFF"),
-                      border: isTodayDate ? "2px solid #FFF" : "1px solid rgba(255,255,255,0.1)",
+                      border: isTodayDate ? "2px solid #FFF" : "1px solid rgba(255,255,255,0.12)",
                       borderRadius: 10,
                       fontSize: 11,
                       fontWeight: 700,
@@ -719,8 +899,8 @@ function StudyLedger() {
                 );
               })}
 
-              <div style={{ position: "absolute", bottom: 4, right: 8, opacity: 0.25, pointerEvents: "none", color: "#FFF" }}>
-                 {MONTH_DOODLES[calendarView.getMonth()]}
+              <div style={{ position: "absolute", bottom: 4, right: 8, opacity: 0.35, pointerEvents: "none", fontSize: 18 }}>
+                {MONTH_DOODLES[calendarView.getMonth()]}
               </div>
             </div>
           </div>
@@ -776,7 +956,7 @@ function StudyLedger() {
                   top: 0,
                   bottom: 0,
                   width: `${climberPct}%`,
-                  background: "#F2C6DE",
+                  background: activeThemeObj.accent,
                   borderRadius: 999,
                   transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)"
                 }}>
@@ -868,7 +1048,8 @@ function StudyLedger() {
                 })}
               </div>
             </div>
-            {/* NOTES CARD PREVIEW */}
+
+            {/* NOTES PREVIEW */}
             <div className="ghibli-card" style={{ padding: 18, marginBottom: 20, cursor: "pointer" }} onClick={() => setShowNotesModal(true)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>Notes</div>
@@ -919,7 +1100,7 @@ function StudyLedger() {
                   onClick={addTask}
                   className="ghibli-btn"
                   style={{
-                    background: "#F2C6DE",
+                    background: activeThemeObj.accent,
                     color: "#161521",
                     padding: "10px 18px",
                     fontSize: 14,
@@ -975,6 +1156,25 @@ function StudyLedger() {
           </div>
         </div>
       </div>
+
+      {/* 100% COMPLETION CELEBRATION FALLING CONFETTI / STARS */}
+      {overall.rate === 100 && currentTasks.length > 0 && (
+        <>
+          {[...Array(24)].map((_, i) => (
+            <div
+              key={`confetti-${i}`}
+              className="confetti-piece"
+              style={{
+                left: `${(i * 4.2) % 100}%`,
+                animationDelay: `${(i * 0.15) % 2.5}s`,
+                fontSize: `${16 + (i % 3) * 6}px`
+              }}
+            >
+              {["✨", "⭐", "🎉", "🌟", "💖", "🌸"][i % 6]}
+            </div>
+          ))}
+        </>
+      )}
       {/* NOTES MODAL */}
       {showNotesModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(20, 16, 28, 0.9)", backdropFilter: "blur(16px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -988,7 +1188,7 @@ function StudyLedger() {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              onBlur={() => saveNotes(notes)}
+              onBlur={() => localStorage.setItem('mori_notes', notes)}
               placeholder="Write your study notes, thoughts, or goals here..."
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", color: "#FFF", fontFamily: "inherit", fontSize: 15, lineHeight: 1.6 }}
             />
@@ -996,139 +1196,271 @@ function StudyLedger() {
         </div>
       )}
 
-      {/* NAAM JAAP MODAL & STATS WINDOW */}
+      {/* NAAM JAAP MODAL */}
       {showJaapModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 100,
-          background: "rgba(18, 14, 26, 0.92)",
-          backdropFilter: "blur(20px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 16,
-          overflowY: "auto"
-        }}>
-          <div className="ghibli-card" style={{
-            width: "100%",
-            maxWidth: 480,
-            padding: "24px 20px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            boxSizing: "border-box",
-            position: "relative",
-            background: "linear-gradient(180deg, rgba(46, 36, 62, 0.9) 0%, rgba(28, 22, 40, 0.95) 100%)"
-          }}>
-            {/* Header */}
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 440, padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Sparkles size={18} color="#F7C5CC" />
-                <span style={{ fontSize: 18, fontWeight: 800, color: "#FFF" }}>Naam Jaap</span>
+                <span style={{ fontSize: 18, fontWeight: 800 }}>Naam Jaap</span>
               </div>
-              <button
-                onClick={() => setShowJaapModal(false)}
-                style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-              >
+              <button onClick={() => setShowJaapModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Tap Counter Ring */}
-            <div style={{ margin: "16px 0 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div
-                className="jaap-ring-btn"
-                onClick={() => addJaapCount(1)}
-              >
-                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", opacity: 0.8, textTransform: "uppercase" }}>
-                  Tap Count
-                </span>
-                <span style={{ fontSize: 44, fontWeight: 800, margin: "2px 0" }}>
-                  {jaapData[todayKey] || 0}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.8 }}>
-                  Today
-                </span>
-              </div>
+            <div className="jaap-ring-btn" onClick={() => addJaapCount(1)} style={{ margin: "20px 0" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", opacity: 0.8 }}>TAP COUNT</span>
+              <span style={{ fontSize: 44, fontWeight: 800 }}>{jaapData[todayKey] || 0}</span>
+              <span style={{ fontSize: 11, opacity: 0.8 }}>Today</span>
+            </div>
 
-              {/* Quick Multi-Add & Decrement Buttons */}
-              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                <button
-                  onClick={() => addJaapCount(1)}
-                  className="ghibli-btn"
-                  style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12, border: "1px solid rgba(255,255,255,0.15)" }}
-                >
-                  +1
-                </button>
-                <button
-                  onClick={() => addJaapCount(11)}
-                  className="ghibli-btn"
-                  style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12, border: "1px solid rgba(255,255,255,0.15)" }}
-                >
-                  +11
-                </button>
-                <button
-                  onClick={() => addJaapCount(108)}
-                  className="ghibli-btn"
-                  style={{ background: "linear-gradient(135deg, #F7C5CC 0%, #D2C4FB 100%)", color: "#161521", padding: "8px 16px", fontSize: 12 }}
-                >
-                  +108
-                </button>
-                <button
-                  onClick={() => addJaapCount(-1)}
-                  className="ghibli-btn"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "#E86F88", padding: "8px 12px", fontSize: 12, border: "1px solid rgba(232, 111, 136, 0.3)" }}
-                >
-                  -1
-                </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => addJaapCount(1)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12 }}>+1</button>
+              <button onClick={() => addJaapCount(11)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12 }}>+11</button>
+              <button onClick={() => addJaapCount(108)} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#161521", padding: "8px 16px", fontSize: 12 }}>+108</button>
+              <button onClick={() => addJaapCount(-1)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.06)", color: "#E86F88", padding: "8px 12px", fontSize: 12 }}>-1</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MONTH GOALS MODAL */}
+      {showMonthGoalsModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 480, padding: 24, display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>
+                Goals for {calendarView.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+              <button onClick={() => setShowMonthGoalsModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+              <input
+                value={newGoalText}
+                onChange={(e) => setNewGoalText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addMonthGoal()}
+                placeholder="Add new monthly target..."
+                className="kw-input"
+                style={{ flex: 1, fontSize: 13 }}
+              />
+              <button onClick={addMonthGoal} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#161521", padding: "0 18px", fontSize: 13 }}>
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 300, overflowY: "auto" }}>
+              {currentMonthGoals.length === 0 ? (
+                <div style={{ opacity: 0.5, textAlign: "center", padding: 20, fontSize: 13 }}>No goals set for this month yet.</div>
+              ) : (
+                currentMonthGoals.map((g, idx) => (
+                  <div key={g.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.06)", padding: "10px 14px", borderRadius: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 12, opacity: 0.6, fontWeight: 700 }}>{idx + 1}.</span>
+                      <button
+                        onClick={() => toggleMonthGoal(g.id)}
+                        style={{ background: g.done ? "#99E3B4" : "transparent", border: "1.5px solid #FFF", borderRadius: 6, width: 20, height: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        {g.done && <Check size={14} color="#FFF" />}
+                      </button>
+                      <span style={{ fontSize: 14, textDecoration: g.done ? "line-through" : "none", opacity: g.done ? 0.6 : 1 }}>
+                        {g.text}
+                      </span>
+                    </div>
+                    <button onClick={() => deleteMonthGoal(g.id)} style={{ background: "none", border: "none", color: "#E86F88", cursor: "pointer", opacity: 0.7 }}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MUSIC PLAYER MODAL */}
+      {showMusicModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 420, padding: 24, textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Music size={18} color={activeThemeObj.accent} />
+                <span style={{ fontSize: 18, fontWeight: 800 }}>Study Playlist</span>
+              </div>
+              <button onClick={() => setShowMusicModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {playlist.length > 0 && (
+              <audio
+                ref={audioRef}
+                src={playlist[currentTrackIdx]?.url}
+                onEnded={nextTrack}
+              />
+            )}
+
+            <div style={{ padding: 20, background: "rgba(0,0,0,0.3)", borderRadius: 20, marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+                {playlist.length > 0 ? playlist[currentTrackIdx]?.name : "No tracks uploaded"}
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>
+                {playlist.length > 0 ? `Track ${currentTrackIdx + 1} of ${playlist.length}` : "Upload MP3 or audio files from storage"}
               </div>
             </div>
 
-            {/* WEEKLY STATS BAR CHART */}
-            <div style={{ width: "100%", background: "rgba(0,0,0,0.25)", borderRadius: 20, padding: 16, boxSizing: "border-box", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, letterSpacing: "0.05em" }}>LAST 7 DAYS JAAP</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#F7C5CC" }}>This Week: {jaapStats.weekTotal}</span>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 20 }}>
+              <button onClick={prevTrack} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.15)", color: "#FFF", width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ChevronLeft size={20} />
+              </button>
 
-              {/* Bar Chart Visual */}
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: 90, gap: 8, padding: "0 4px" }}>
-                {jaapStats.weekDays.map((w) => {
-                  const barHeightPct = Math.max(10, Math.round((w.count / jaapStats.maxDayCount) * 100));
-                  const isTodayBar = w.key === todayKey;
+              <button onClick={togglePlayMusic} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#161521", width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {isPlayingMusic ? <Pause size={24} fill="#161521" /> : <Play size={24} fill="#161521" style={{ marginLeft: 2 }} />}
+              </button>
 
+              <button onClick={nextTrack} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.15)", color: "#FFF", width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ChevronRight size={20} />
+              </button>
+            </div>
+
+            <label className="ghibli-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", color: "#FFF", padding: "10px 18px", fontSize: 13, cursor: "pointer" }}>
+              <Upload size={16} /> Upload Audio Files
+              <input type="file" accept="audio/*" multiple onChange={handleAudioUpload} style={{ display: "none" }} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* THEMES MODAL */}
+      {showThemeModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 440, padding: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>Choose Aesthetic Theme</div>
+              <button onClick={() => setShowThemeModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {Object.values(THEMES).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setCurrentTheme(t.id); setShowThemeModal(false); }}
+                  style={{
+                    background: t.bgColor,
+                    color: t.textColor,
+                    border: currentTheme === t.id ? `2px solid ${t.accent}` : "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 18,
+                    padding: 16,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6
+                  }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{t.name}</span>
+                  <div style={{ width: 24, height: 6, background: t.accent, borderRadius: 999 }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VINTAGE BOOKS & PDF TRACKER MODAL */}
+      {showBooksModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(28, 22, 18, 0.95)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{
+            width: "100%",
+            maxWidth: 640,
+            maxHeight: "85vh",
+            padding: 24,
+            background: "#2A211B",
+            border: "2px solid #5C4838",
+            color: "#F2E8DC",
+            fontFamily: "'Playfair Display', serif",
+            display: "flex",
+            flexDirection: "column"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, fontStyle: "italic" }}>📖 Vintage Library</div>
+              <button onClick={() => setShowBooksModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 18, textAlign: "right" }}>
+              <label className="ghibli-btn" style={{ background: "#C49A6C", color: "#1E140C", padding: "8px 16px", fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Upload size={14} /> Add PDF Book
+                <input type="file" accept="application/pdf" multiple onChange={handlePdfUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+              {books.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, opacity: 0.6, fontFamily: "sans-serif", fontSize: 13 }}>
+                  No books added yet. Upload PDFs to track your reading journey!
+                </div>
+              ) : (
+                books.map((b) => {
+                  const pct = Math.min(100, Math.round((b.currentPage / b.totalPages) * 100));
                   return (
-                    <div key={w.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
-                      <span style={{ fontSize: 9, opacity: 0.7, fontWeight: 600 }}>{w.count > 0 ? w.count : ""}</span>
-                      <div style={{
-                        width: "100%",
-                        maxWidth: 24,
-                        height: `${barHeightPct}%`,
-                        background: isTodayBar ? "linear-gradient(180deg, #F7C5CC 0%, #E898AC 100%)" : "rgba(255,255,255,0.2)",
-                        borderRadius: 6,
-                        transition: "height 0.4s ease"
-                      }} />
-                      <span style={{ fontSize: 10, opacity: isTodayBar ? 1 : 0.5, fontWeight: isTodayBar ? 800 : 500 }}>{w.dayLabel}</span>
+                    <div key={b.id} style={{ background: "rgba(0,0,0,0.3)", padding: 16, borderRadius: 16, border: "1px solid #4A3A2C" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>{b.title}</div>
+                        <button
+                          onClick={() => setSelectedPdfUrl(b.url)}
+                          style={{ background: "none", border: "none", color: "#C49A6C", cursor: "pointer", textDecoration: "underline", fontSize: 13 }}
+                        >
+                          Open PDF
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, opacity: 0.8, marginBottom: 8, fontFamily: "sans-serif" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span>Pages:</span>
+                          <button onClick={() => updateBookPages(b.id, -1)} style={{ background: "#4A3A2C", color: "#FFF", border: "none", borderRadius: 4, width: 22, height: 22, cursor: "pointer" }}>-</button>
+                          <span style={{ fontWeight: 700, color: "#FFE885" }}>{b.currentPage}</span>
+                          <button onClick={() => updateBookPages(b.id, 1)} style={{ background: "#4A3A2C", color: "#FFF", border: "none", borderRadius: 4, width: 22, height: 22, cursor: "pointer" }}>+</button>
+                          <span>of</span>
+                          <input
+                            type="number"
+                            value={b.totalPages}
+                            onChange={(e) => updateBookTotalPages(b.id, parseInt(e.target.value || 1, 10))}
+                            style={{ width: 44, background: "rgba(0,0,0,0.4)", border: "1px solid #5C4838", color: "#FFF", borderRadius: 4, padding: "2px 4px", fontSize: 11 }}
+                          />
+                        </div>
+                        <div>{pct}% Read</div>
+                      </div>
+
+                      <div style={{ height: 6, background: "rgba(0,0,0,0.5)", borderRadius: 999, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: "#C49A6C", transition: "width 0.3s ease" }} />
+                      </div>
                     </div>
                   );
-                })}
-              </div>
-
-              {/* All time & Average Footer */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 10, opacity: 0.6 }}>Daily Average</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#FFF", marginTop: 2 }}>{jaapStats.avgPerDay}</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 10, opacity: 0.6 }}>All-Time Total</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#99E3B4", marginTop: 2 }}>{jaapStats.totalAllTime}</div>
-                </div>
-              </div>
+                })
+              )}
             </div>
-
           </div>
+        </div>
+      )}
+
+      {/* PDF VIEWER EMBED */}
+      {selectedPdfUrl && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 20px", background: "#111", color: "#FFF" }}>
+            <span>PDF Reader View</span>
+            <button onClick={() => setSelectedPdfUrl(null)} style={{ background: "none", border: "none", color: "#FFF", cursor: "pointer" }}>
+              <X size={20} />
+            </button>
+          </div>
+          <iframe src={selectedPdfUrl} style={{ width: "100%", flex: 1, border: "none" }} title="PDF Reader" />
         </div>
       )}
 
