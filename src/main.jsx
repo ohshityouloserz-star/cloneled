@@ -1600,26 +1600,6 @@ export function StudyLedger() {
           </div>
         </div>
       )}
-      // Helper: get arrays of dates for each productivity category
-      const getProdDates = () => {
-        const maxDates = [];
-        const minDates = [];
-        const inBetweenDates = [];
-
-        Object.keys(tasksByDate).forEach((key) => {
-          const dayTasks = tasksByDate[key] || [];
-          if (dayTasks.length === 0) return;
-          const achieved = dayTasks.filter((t) => t.status === 'achieved').length;
-          const rate = achieved / dayTasks.length;
-          if (rate >= 0.9) maxDates.push(key);
-          else if (rate <= 0.5) minDates.push(key);
-          else inBetweenDates.push(key);
-        });
-
-        return { maxDates, minDates, inBetweenDates };
-      };
-
-      const prodDates = getProdDates();
             {/* STREAK & METRICS (ENHANCED WITH DATE DRILL-DOWN) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
               <div className="ghibli-card" style={{ padding: 18, gridColumn: "span 2" }}>
