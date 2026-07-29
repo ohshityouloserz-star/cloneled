@@ -1,4 +1,3 @@
-// src/main.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import {
@@ -20,15 +19,16 @@ import {
   BookOpen,
   Palette,
   Upload,
-  FileText,
-  CloudRain,
-  Sun,
-  Cloud,
-  Wind,
-  Thermometer
+  BarChart2,
+  CloudSun,
+  Edit2,
+  ArrowRight,
+  Calendar,
+  Volume2
 } from 'lucide-react';
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Quicksand:wght@500;700&display=swap');`;
+
 // Dynamic Month Gradient Backgrounds for Calendar
 const MONTH_PASTEL_GRADIENTS = [
   "linear-gradient(135deg, rgba(255, 209, 220, 0.25) 0%, rgba(255, 230, 240, 0.1) 100%)", // Jan
@@ -46,11 +46,7 @@ const MONTH_PASTEL_GRADIENTS = [
 ];
 
 const MONTH_DOODLES = ["❄️", "💗", "🌱", "🌸", "🌿", "☀️", "🏖️", "🌻", "🍁", "🎃", "🍂", "🎄"];
-// Themes Configuration
-// - Cat: prepared for animated cats over calendar + walking cat at page end
-// - Butterfly: prepared for vintage butterflies + click-to-spawn flying butterfly
-// - Rain: will add rising water level animation
-// - Custom: new theme with user-uploaded background + pastel gradient overlays
+// Themes Configuration with Enhanced Aesthetics
 const THEMES = {
   ghibli: {
     id: "ghibli",
@@ -67,10 +63,10 @@ const THEMES = {
     id: "cat",
     name: "Warm Cat 🐾",
     font: "'Fredoka', 'Quicksand', sans-serif",
-    bgImage: "url('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1920&q=80')", // cat background
-    bgColor: "#2C221E",
-    cardBg: "rgba(68, 52, 45, 0.65)",
-    cardBorder: "rgba(247, 202, 179, 0.25)",
+    bgImage: "url('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1920&q=80')",
+    bgColor: "#2A1F1B",
+    cardBg: "rgba(68, 48, 40, 0.75)",
+    cardBorder: "rgba(247, 198, 179, 0.35)",
     accent: "#F7C6B3",
     textColor: "#FAF0CA",
   },
@@ -78,10 +74,10 @@ const THEMES = {
     id: "butterfly",
     name: "Fairy Butterfly 🦋",
     font: "'Quicksand', sans-serif",
-    bgImage: "url('https://images.unsplash.com/photo-1509214624648-28e7a9a78e4a?auto=format&fit=crop&w=1920&q=80')", // vintage butterfly-ish
+    bgImage: "url('https://images.unsplash.com/photo-1535083783855-76ae62b2914e?auto=format&fit=crop&w=1920&q=80')",
     bgColor: "#1E1A2B",
-    cardBg: "rgba(48, 40, 72, 0.6)",
-    cardBorder: "rgba(215, 185, 255, 0.25)",
+    cardBg: "rgba(48, 38, 72, 0.7)",
+    cardBorder: "rgba(215, 185, 255, 0.3)",
     accent: "#D7B9FF",
     textColor: "#F5EEFF",
   },
@@ -98,16 +94,17 @@ const THEMES = {
   },
   custom: {
     id: "custom",
-    name: "Custom 🖼️",
-    font: "'Plus Jakarta Sans', 'Fredoka', sans-serif",
-    bgImage: "none", // will be set via user upload
-    bgColor: "#1B1726",
-    cardBg: "rgba(42, 34, 58, 0.55)",
-    cardBorder: "rgba(255, 235, 245, 0.2)",
-    accent: "#F2C6DE",
-    textColor: "#F3EFF8",
+    name: "Custom Wallpaper ✨",
+    font: "'Plus Jakarta Sans', sans-serif",
+    bgImage: "none",
+    bgColor: "#14111D",
+    cardBg: "rgba(30, 25, 42, 0.65)",
+    cardBorder: "rgba(255, 215, 235, 0.3)",
+    accent: "#FFD1DC",
+    textColor: "#FFFFFF",
   }
 };
+
 const TIME_OPTIONS_12H = (() => {
   const times = [];
   for (let h = 0; h < 24; h++) {
@@ -168,19 +165,15 @@ export function StudyLedger() {
   const isToday = isSameDay(viewDate, today);
 
   const [now, setNow] = useState(new Date());
-
   const [tasksByDate, setTasksByDate] = useState(() => {
     try { return JSON.parse(localStorage.getItem('mori_tasks') || '{}'); } catch { return {}; }
   });
-
   const [crossedDates, setCrossedDates] = useState(() => {
     try { return JSON.parse(localStorage.getItem('mori_crossed') || '{}'); } catch { return {}; }
   });
-
   const [jaapData, setJaapData] = useState(() => {
     try { return JSON.parse(localStorage.getItem('mori_jaap') || '{}'); } catch { return {}; }
   });
-
   const [notes, setNotes] = useState(() => localStorage.getItem('mori_notes') || '');
 
   // Month Goals
@@ -193,16 +186,20 @@ export function StudyLedger() {
     try { return JSON.parse(localStorage.getItem('mori_books') || '[]'); } catch { return []; }
   });
 
-  // Theme State (supports new 'custom' theme)
+  // Theme State & Custom Wallpaper
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('mori_theme') || 'ghibli');
+  const [customWallpaper, setCustomWallpaper] = useState(() => localStorage.getItem('mori_custom_bg') || '');
 
-  // Custom theme background (user-uploaded image URL stored in localStorage)
-  const [customBgImage, setCustomBgImage] = useState(() => localStorage.getItem('mori_custom_bg') || '');
+  // Flying Butterfly Interactive Clicks State
+  const [butterflies, setButterflies] = useState([]);
 
+  // Weather State
+  const [weather, setWeather] = useState({ temp: '--', icon: '🌤️', desc: 'Loading weather...' });
   // Input States
   const [newTaskText, setNewTaskText] = useState('');
   const [newStart, setNewStart] = useState('');
   const [newEnd, setNewEnd] = useState('');
+
   // Calendar View
   const [calendarView, setCalendarView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -216,10 +213,12 @@ export function StudyLedger() {
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showBooksModal, setShowBooksModal] = useState(false);
-  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
+  const [metricDetailModal, setMetricDetailModal] = useState(null); // 'max' | 'inBetween' | 'min'
+  const [selectedDrillDate, setSelectedDrillDate] = useState(null);
 
-  // For productivty date clicks: which date’s tasks to show below metrics
-  const [selectedProductivityDateKey, setSelectedProductivityDateKey] = useState(null);
+  // Audio Rename Inline Edit
+  const [editingTrackIdx, setEditingTrackIdx] = useState(null);
+  const [editingTrackName, setEditingTrackName] = useState('');
 
   // Pomodoro
   const [timerType, setTimerType] = useState('focus'); // 'focus' | 'break'
@@ -231,13 +230,70 @@ export function StudyLedger() {
   const [pomoActive, setPomoActive] = useState(false);
 
   // Music Player
-  const [playlist, setPlaylist] = useState([]);
+  const [playlist, setPlaylist] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mori_playlist_meta') || '[]'); } catch { return []; }
+  });
   const [currentTrackIdx, setCurrentTrackIdx] = useState(0);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
   const audioRef = useRef(null);
 
   // New Month Goal Input
   const [newGoalText, setNewGoalText] = useState('');
+
+  // Save Persistence
+  useEffect(() => localStorage.setItem('mori_tasks', JSON.stringify(tasksByDate)), [tasksByDate]);
+  useEffect(() => localStorage.setItem('mori_crossed', JSON.stringify(crossedDates)), [crossedDates]);
+  useEffect(() => localStorage.setItem('mori_jaap', JSON.stringify(jaapData)), [jaapData]);
+  useEffect(() => localStorage.setItem('mori_month_goals', JSON.stringify(monthGoals)), [monthGoals]);
+  useEffect(() => localStorage.setItem('mori_books', JSON.stringify(books)), [books]);
+  useEffect(() => localStorage.setItem('mori_theme', currentTheme), [currentTheme]);
+  useEffect(() => localStorage.setItem('mori_custom_bg', customWallpaper), [customWallpaper]);
+
+  useEffect(() => {
+    const metaToSave = playlist.map(p => ({ name: p.name, url: p.url }));
+    localStorage.setItem('mori_playlist_meta', JSON.stringify(metaToSave));
+  }, [playlist]);
+
+  // Live Clock
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch Weather Info
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+            const data = await res.json();
+            if (data && data.current_weather) {
+              const code = data.current_weather.weathercode;
+              let icon = '☀️';
+              if (code >= 1 && code <= 3) icon = '⛅';
+              else if (code >= 45 && code <= 48) icon = '🌫️';
+              else if (code >= 51 && code <= 67) icon = '🌧️';
+              else if (code >= 71) icon = '❄️';
+              else if (code >= 95) icon = '🌩️';
+              setWeather({
+                temp: `${Math.round(data.current_weather.temperature)}°C`,
+                icon,
+                desc: 'Local Weather'
+              });
+            }
+          } catch {
+            setWeather({ temp: '24°C', icon: '🌤️', desc: 'Sunny' });
+          }
+        },
+        () => setWeather({ temp: '24°C', icon: '🌤️', desc: 'Sunny' })
+      );
+    } else {
+      setWeather({ temp: '24°C', icon: '🌤️', desc: 'Sunny' });
+    }
+  }, []);
+
   // Pomodoro Timer
   useEffect(() => {
     let interval = null;
@@ -248,23 +304,49 @@ export function StudyLedger() {
     }
     return () => clearInterval(interval);
   }, [pomoActive, pomoTime]);
-  // Streak Logic:
-  // If no tasks exist for today, streak falls back to 0.
-  // Otherwise, counts all distinct logged days that have at least one task.
+
+  // Click handler for Interactive Flying Butterflies (Butterfly Theme)
+  const handleContainerClick = (e) => {
+    if (currentTheme !== 'butterfly') return;
+    const butterflyIcons = ['🦋', '✨', '🌸', '🦋', '🌿'];
+    const newBf = {
+      id: Date.now() + Math.random(),
+      x: e.clientX,
+      y: e.clientY,
+      icon: butterflyIcons[Math.floor(Math.random() * butterflyIcons.length)]
+    };
+    setButterflies((prev) => [...prev.slice(-15), newBf]);
+  };
+  // Fixed Streak Logic (Defaults strictly to 0 when no activity)
   const calculateStreak = () => {
     const loggedKeys = Object.keys(tasksByDate).filter(key => tasksByDate[key] && tasksByDate[key].length > 0);
     if (loggedKeys.length === 0) return 0;
 
-    const hasTodayTasks = tasksByDate[todayKey] && tasksByDate[todayKey].length > 0;
-    if (!hasTodayTasks) return 0;
+    let currentStreak = 0;
+    let checkDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-    const sortedKeys = Array.from(new Set(loggedKeys)).sort();
-    return sortedKeys.length;
+    // If no tasks today, check if streak ended yesterday
+    const todayStr = toKey(checkDate);
+    if (!tasksByDate[todayStr] || tasksByDate[todayStr].length === 0) {
+      checkDate = addDays(checkDate, -1);
+    }
+
+    while (true) {
+      const key = toKey(checkDate);
+      const dayTasks = tasksByDate[key];
+      if (dayTasks && dayTasks.length > 0 && dayTasks.some(t => t.status === 'achieved')) {
+        currentStreak++;
+        checkDate = addDays(checkDate, -1);
+      } else {
+        break;
+      }
+    }
+    return currentStreak;
   };
 
   const streak = calculateStreak();
 
-  // Metrics
+  // Metrics with Drilldown Dates & Fixed Zero-States (Default Max Prod Days = 0)
   const calculateMetrics = () => {
     let totalTasks = 0;
     let totalAchieved = 0;
@@ -272,14 +354,25 @@ export function StudyLedger() {
     let minProdDays = 0;
     let inBetweenDays = 0;
 
+    const maxDates = [];
+    const minDates = [];
+    const inBetweenDates = [];
+
     Object.keys(tasksByDate).forEach((key) => {
       const dayTasks = tasksByDate[key] || [];
       if (dayTasks.length > 0) {
         const achieved = dayTasks.filter((t) => t.status === 'achieved').length;
         const rate = achieved / dayTasks.length;
-        if (rate >= 0.9) maxProdDays++;
-        else if (rate <= 0.5) minProdDays++;
-        else inBetweenDays++;
+        if (rate >= 0.9) {
+          maxProdDays++;
+          maxDates.push(key);
+        } else if (rate <= 0.5) {
+          minProdDays++;
+          minDates.push(key);
+        } else {
+          inBetweenDays++;
+          inBetweenDates.push(key);
+        }
       }
     });
 
@@ -290,12 +383,41 @@ export function StudyLedger() {
     }
 
     const rate = totalTasks > 0 ? Math.round((totalAchieved / totalTasks) * 100) : 0;
-    return { totalTasks, totalAchieved, rate, maxProdDays, minProdDays, inBetweenDays };
+    return {
+      totalTasks,
+      totalAchieved,
+      rate,
+      maxProdDays,
+      minProdDays,
+      inBetweenDays,
+      maxDates,
+      minDates,
+      inBetweenDates
+    };
   };
 
   const overall = calculateMetrics();
   const climberPct = overall.rate;
 
+  // Fully Restored Naam Jaap Statistics Calculation
+  const calculateJaapStats = () => {
+    const todayJaap = jaapData[todayKey] || 0;
+    const jaapValues = Object.values(jaapData).map(v => Number(v) || 0);
+    const totalAllTime = jaapValues.reduce((acc, curr) => acc + curr, 0);
+    const activeDays = Object.keys(jaapData).filter(k => (jaapData[k] || 0) > 0).length;
+    const highestSingleDay = jaapValues.length > 0 ? Math.max(...jaapValues, 0) : 0;
+    const averagePerDay = activeDays > 0 ? Math.round(totalAllTime / activeDays) : 0;
+
+    return {
+      todayJaap,
+      totalAllTime,
+      activeDays,
+      highestSingleDay,
+      averagePerDay
+    };
+  };
+
+  const jaapStats = calculateJaapStats();
   // Task Actions
   const currentTasks = tasksByDate[viewKey] || [];
 
@@ -332,6 +454,23 @@ export function StudyLedger() {
     }));
   };
 
+  // ONE-CLICK ROLLOVER TO TOMORROW
+  const rolloverTaskToTomorrow = (task) => {
+    const tomorrowKey = toKey(addDays(fromKey(viewKey), 1));
+    setTasksByDate((prev) => {
+      // Remove task from viewKey
+      const currentList = (prev[viewKey] || []).filter((t) => t.id !== task.id);
+      // Add task to tomorrowKey maintaining ID and text
+      const tomorrowList = prev[tomorrowKey] || [];
+      const movedTask = { ...task, status: 'pending' };
+      return {
+        ...prev,
+        [viewKey]: currentList,
+        [tomorrowKey]: [...tomorrowList, movedTask]
+      };
+    });
+  };
+
   const handleCrossDate = (d, key) => {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     if (d > todayStart) return;
@@ -341,10 +480,41 @@ export function StudyLedger() {
     }));
   };
 
+  // 108-Count Audio / Haptic Feedback Handler
+  const trigger108ChimeAndVibrate = () => {
+    // 1. Audio Cue Chime
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(528, ctx.currentTime); // 528Hz Solfeggio Chime
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 1.8);
+    } catch {}
+
+    // 2. Mobile Haptic Vibration
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  };
+
   const addJaapCount = (amt) => {
+    const current = jaapData[todayKey] || 0;
+    const nextVal = Math.max(0, current + amt);
+    
+    // Check if crossed a multiple of 108
+    if (nextVal > 0 && Math.floor(nextVal / 108) > Math.floor(current / 108)) {
+      trigger108ChimeAndVibrate();
+    }
+
     setJaapData((prev) => ({
       ...prev,
-      [todayKey]: Math.max(0, (prev[todayKey] || 0) + amt)
+      [todayKey]: nextVal
     }));
   };
 
@@ -367,7 +537,6 @@ export function StudyLedger() {
     setBreakMins(m);
     if (timerType === 'break') { setPomoActive(false); setPomoTime((h * 60 + m) * 60); }
   };
-
   // Calendar Construction
   const year = calendarView.getFullYear();
   const month = calendarView.getMonth();
@@ -413,14 +582,21 @@ export function StudyLedger() {
     }));
   };
 
-  // Audio Upload & Navigation
+  // Audio Upload & Playlist Actions with Renaming
   const handleAudioUpload = (e) => {
     const files = Array.from(e.target.files);
     const newTracks = files.map((file) => ({
-      name: file.name.replace(/.[^/.]+$/, ""),
+      name: file.name.replace(/\.[^/.]+$/, ""),
       url: URL.createObjectURL(file)
     }));
     setPlaylist((prev) => [...prev, ...newTracks]);
+  };
+
+  const saveTrackRename = (idx) => {
+    if (!editingTrackName.trim()) return;
+    setPlaylist((prev) => prev.map((t, i) => i === idx ? { ...t, name: editingTrackName.trim() } : t));
+    setEditingTrackIdx(null);
+    setEditingTrackName('');
   };
 
   const togglePlayMusic = () => {
@@ -447,17 +623,21 @@ export function StudyLedger() {
     setIsPlayingMusic(true);
   };
 
-  // Book / PDF Upload
+  // PDF Upload & Native Browser Viewer Launch
   const handlePdfUpload = (e) => {
     const files = Array.from(e.target.files);
     const newBooks = files.map((file) => ({
       id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
-      title: file.name.replace(/.[^/.]+$/, ""),
+      title: file.name.replace(/\.[^/.]+$/, ""),
       url: URL.createObjectURL(file),
       currentPage: 0,
       totalPages: 100
     }));
     setBooks((prev) => [...prev, ...newBooks]);
+  };
+
+  const openPdfInNativeTab = (fileUrl) => {
+    window.open(fileUrl, '_blank');
   };
 
   const updateBookPages = (id, delta) => {
@@ -474,42 +654,44 @@ export function StudyLedger() {
     setBooks((prev) => prev.map((b) => b.id === id ? { ...b, totalPages: Math.max(1, total) } : b));
   };
 
-  // Open PDF in browser’s native reader (new tab)
-  const openPdfInBrowser = (url) => {
-    window.open(url, '_blank');
+  // Custom Wallpaper Upload Handler
+  const handleCustomBgUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const base64Img = evt.target.result;
+        setCustomWallpaper(base64Img);
+        setCurrentTheme('custom');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const activeThemeObj = THEMES[currentTheme] || THEMES.ghibli;
-  // Helper: get arrays of dates for each productivity category
-      const getProdDates = () => {
-        const maxDates = [];
-        const minDates = [];
-        const inBetweenDates = [];
-
-        Object.keys(tasksByDate).forEach((key) => {
-          const dayTasks = tasksByDate[key] || [];
-          if (dayTasks.length === 0) return;
-          const achieved = dayTasks.filter((t) => t.status === 'achieved').length;
-          const rate = achieved / dayTasks.length;
-          if (rate >= 0.9) maxDates.push(key);
-          else if (rate <= 0.5) minDates.push(key);
-          else inBetweenDates.push(key);
-        });
-
-        return { maxDates, minDates, inBetweenDates };
-      };
-
-      const prodDates = getProdDates();
+  const activeThemeObj = currentTheme === 'custom' ? {
+    id: "custom",
+    name: "Custom Wallpaper ✨",
+    font: "'Plus Jakarta Sans', sans-serif",
+    bgImage: customWallpaper ? `url('${customWallpaper}')` : "none",
+    bgColor: "#14111D",
+    cardBg: "rgba(30, 25, 42, 0.65)",
+    cardBorder: "rgba(255, 215, 235, 0.3)",
+    accent: "#FFD1DC",
+    textColor: "#FFFFFF"
+  } : (THEMES[currentTheme] || THEMES.ghibli);
   return (
-    <div style={{
-      fontFamily: activeThemeObj.font,
-      backgroundColor: activeThemeObj.bgColor,
-      minHeight: "100vh",
-      color: activeThemeObj.textColor,
-      position: "relative",
-      overflowX: "hidden",
-      transition: "background-color 0.4s ease, color 0.4s ease"
-    }}>
+    <div 
+      onClick={handleContainerClick}
+      style={{
+        fontFamily: activeThemeObj.font,
+        backgroundColor: activeThemeObj.bgColor,
+        minHeight: "100vh",
+        color: activeThemeObj.textColor,
+        position: "relative",
+        overflowX: "hidden",
+        transition: "background-color 0.4s ease, color 0.4s ease"
+      }}
+    >
       <style>{`
         ${FONT_IMPORT}
         body { margin: 0; padding: 0; background: ${activeThemeObj.bgColor}; }
@@ -546,7 +728,7 @@ export function StudyLedger() {
           border: 1.5px solid ${activeThemeObj.accent};
         }
 
-        /* Rain Animation */
+        /* Rain Drop Animation */
         @keyframes rainDrop {
           0% { transform: translateY(-100px); opacity: 0.8; }
           100% { transform: translateY(100vh); opacity: 0.2; }
@@ -561,50 +743,31 @@ export function StudyLedger() {
           animation: rainDrop 1.2s linear infinite;
         }
 
-        /* Rising water level for rain theme */
-        @keyframes waterRise {
-          0% { transform: translateY(100%); opacity: 0; }
-          10% { opacity: 0.6; }
-          100% { transform: translateY(0); opacity: 0.25; }
+        /* Dynamic Continuous Rising Water Level Overlay Animation */
+        @keyframes dynamicWaterRise {
+          0% { height: 28px; }
+          50% { height: 90px; }
+          100% { height: 28px; }
         }
-        .water-layer {
-          position: fixed;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 40vh;
-          background: linear-gradient(0deg, rgba(156, 213, 236, 0.6) 0%, rgba(156, 213, 236, 0.15) 60%, rgba(156, 213, 236, 0) 100%);
-          pointer-events: none;
-          z-index: 2;
-          animation: waterRise 6s ease-in-out infinite;
+        @keyframes waveRipples {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
 
-        /* Cat theme: walking cat at bottom */
-        @keyframes catWalk {
-          0% { transform: translateX(-10vw); }
-          100% { transform: translateX(110vw); }
-        }
-        .walking-cat {
-          position: fixed;
-          bottom: 2vh;
-          font-size: 40px;
-          pointer-events: none;
-          z-index: 5;
-          animation: catWalk 18s linear infinite;
+        /* Walking Cat Animation Across Bottom of Page */
+        @keyframes walkCatContinuous {
+          0% { left: -80px; transform: scaleX(1); }
+          49% { transform: scaleX(1); }
+          50% { left: calc(100vw + 20px); transform: scaleX(-1); }
+          99% { transform: scaleX(-1); }
+          100% { left: -80px; transform: scaleX(1); }
         }
 
-        /* Butterfly theme: flying butterfly on click */
-        @keyframes butterflyFly {
-          0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
-          10% { opacity: 1; }
-          100% { transform: translate(var(--fly-dx, 100px), var(--fly-dy, -150px)) scale(1.1); opacity: 0; }
-        }
-        .click-butterfly {
-          position: fixed;
-          font-size: 22px;
-          pointer-events: none;
-          z-index: 6;
-          animation: butterflyFly 2.2s ease-out forwards;
+        /* Interactive Click Butterfly Animation */
+        @keyframes flyUpButterFly {
+          0% { opacity: 1; transform: translate(-50%, -50%) scale(0.6) rotate(0deg); }
+          50% { opacity: 0.9; transform: translate(-50%, -80px) scale(1.2) rotate(20deg); }
+          100% { opacity: 0; transform: translate(-50%, -160px) scale(1.6) rotate(-20deg); }
         }
 
         .jaap-ring-btn {
@@ -652,7 +815,7 @@ export function StudyLedger() {
         }
       `}</style>
 
-      {/* RAIN ANIMATION OVERLAY FOR RAIN THEME + RISING WATER */}
+      {/* RAIN THEME: DYNAMIC RISING WATER LEVEL CONTAINER ANCHORED AT BOTTOM */}
       {currentTheme === 'raining' && (
         <>
           {[...Array(30)].map((_, i) => (
@@ -666,23 +829,72 @@ export function StudyLedger() {
               }}
             />
           ))}
-          <div className="water-layer" />
+
+          {/* Dynamic Rising Water Level Bar */}
+          <div style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: "linear-gradient(180deg, rgba(156,213,236,0.55) 0%, rgba(26,38,48,0.96) 100%)",
+            backdropFilter: "blur(8px)",
+            zIndex: 2,
+            pointerEvents: "none",
+            borderTop: "2px solid rgba(160, 210, 235, 0.8)",
+            boxShadow: "0px -12px 35px rgba(156,213,236,0.4)",
+            animation: "dynamicWaterRise 16s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-around",
+            paddingTop: 6
+          }}>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>🌊</span>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>💧</span>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>🌊</span>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>☔</span>
+          </div>
         </>
       )}
 
-      {/* WALKING CAT FOR CAT THEME */}
+      {/* CAT THEME: ANIMATED CAT WALKING CONTINUOUSLY AT BOTTOM */}
       {currentTheme === 'cat' && (
-        <div className="walking-cat">🐱</div>
+        <div style={{
+          position: "fixed",
+          bottom: 10,
+          zIndex: 10,
+          pointerEvents: "none",
+          fontSize: 34,
+          animation: "walkCatContinuous 22s linear infinite"
+        }}>
+          🐈‍⬛ <span style={{ fontSize: 16 }}>🐾 🐾</span>
+        </div>
       )}
+
+      {/* BUTTERFLY THEME: INTERACTIVE FLYING BUTTERFLIES ON PAGE CLICK */}
+      {currentTheme === 'butterfly' && butterflies.map((bf) => (
+        <div
+          key={bf.id}
+          style={{
+            position: "fixed",
+            left: bf.x,
+            top: bf.y,
+            pointerEvents: "none",
+            zIndex: 999,
+            fontSize: 28,
+            animation: "flyUpButterFly 1.8s ease-out forwards"
+          }}
+        >
+          {bf.icon}
+        </div>
+      ))}
+
       {/* DYNAMIC BACKGROUND */}
       <div style={{
         position: "fixed",
         inset: 0,
         zIndex: 0,
         pointerEvents: "none",
-        backgroundImage: currentTheme === 'custom' && customBgImage
-          ? `url('${customBgImage}')`
-          : activeThemeObj.bgImage,
+        backgroundImage: activeThemeObj.bgImage,
         backgroundSize: "cover",
         backgroundPosition: "center",
         filter: "brightness(0.75) saturate(1.1)",
@@ -693,19 +905,19 @@ export function StudyLedger() {
           background: `linear-gradient(180deg, ${activeThemeObj.bgColor}55 0%, ${activeThemeObj.bgColor}dd 100%)`,
         }} />
       </div>
-
       <div style={{ position: "relative", zIndex: 2 }}>
+
         {/* TOP NAVBAR / UTILITIES */}
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "24px 16px 40px", boxSizing: "border-box" }}>
 
           <div style={{ width: "100%", maxWidth: 480, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
 
-            {/* LIVE CLOCK WITH WEATHER SIGN */}
+            {/* LIVE CLOCK & LIVE WEATHER INDICATOR */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div className="live-clock-badge" style={{
                 background: "rgba(0,0,0,0.35)",
                 borderRadius: 20,
-                padding: "6px 16px",
+                padding: "6px 14px",
                 fontSize: 13,
                 fontWeight: 700,
                 color: activeThemeObj.accent,
@@ -715,25 +927,27 @@ export function StudyLedger() {
                 {formatLiveClock(now)}
               </div>
 
-              {/* Simple weather sign (static placeholder; can be replaced with API later) */}
+              {/* LIVE WEATHER WIDGET */}
               <div style={{
                 background: "rgba(0,0,0,0.35)",
-                borderRadius: 16,
-                padding: "6px 10px",
-                fontSize: 13,
+                borderRadius: 20,
+                border: "1px solid rgba(255,255,255,0.2)",
+                padding: "6px 12px",
+                fontSize: 12,
                 fontWeight: 700,
                 color: "#FFF",
-                backdropFilter: "blur(12px)",
                 display: "flex",
                 alignItems: "center",
-                gap: 6
+                gap: 5,
+                backdropFilter: "blur(12px)"
               }}>
-                <Sun size={14} color="#FFD56A" /> 28°C
+                <span>{weather.icon}</span>
+                <span>{weather.temp}</span>
               </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* TOP BAR NAAM JAAP BUTTON - ONLY SPARKLES SYMBOL & COUNT */}
+              {/* TOP BAR NAAM JAAP BUTTON WITH COUNT */}
               <button
                 onClick={() => setShowJaapModal(true)}
                 className="ghibli-btn"
@@ -910,7 +1124,8 @@ export function StudyLedger() {
               </div>
             </div>
           </div>
-          {/* CALENDAR - BACKGROUND GRADIENT CHANGES PER MONTH */}
+
+          {/* CALENDAR - CAT THEME DECORATED WITH CATS RESTING ON EDGES */}
           <div className="ghibli-card" style={{
             width: "100%",
             maxWidth: 380,
@@ -918,8 +1133,17 @@ export function StudyLedger() {
             margin: "20px 0",
             boxSizing: "border-box",
             background: MONTH_PASTEL_GRADIENTS[calendarView.getMonth()],
-            transition: "background 0.5s ease"
+            transition: "background 0.5s ease",
+            position: "relative"
           }}>
+
+            {/* CAT OVERLAY DECORATIONS (CAT THEME RESTING ON CALENDAR TOP) */}
+            {currentTheme === 'cat' && (
+              <>
+                <div style={{ position: "absolute", top: -22, left: 18, fontSize: 28, filter: "drop-shadow(0px 4px 8px rgba(0,0,0,0.4))", zIndex: 10 }}>🐱</div>
+                <div style={{ position: "absolute", top: -18, right: 24, fontSize: 24, filter: "drop-shadow(0px 4px 8px rgba(0,0,0,0.4))", zIndex: 10 }}>😸</div>
+              </>
+            )}
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <button
@@ -929,7 +1153,6 @@ export function StudyLedger() {
                 <ChevronLeft size={20} />
               </button>
 
-              {/* MONTH TITLE CLICK OPENS MONTH GOALS MODAL */}
               <button
                 onClick={() => setShowMonthGoalsModal(true)}
                 style={{
@@ -1015,7 +1238,7 @@ export function StudyLedger() {
         }}>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
 
-            {/* STREAK & METRICS */}
+            {/* STREAK & CLICKABLE METRICS WITH DRILLDOWN */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
               <div className="ghibli-card" style={{ padding: 18, gridColumn: "span 2" }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7, display: "flex", alignItems: "center", gap: 4 }}>
@@ -1024,24 +1247,40 @@ export function StudyLedger() {
                 <div style={{ fontSize: 26, fontWeight: 800, marginTop: 4, color: "#FFE885" }}>{streak}d</div>
               </div>
 
-              <div className="ghibli-card" style={{ padding: 16 }}>
+              {/* MAX PRODUCTIVITY CARD (CLICKABLE FOR DRILLDOWN) */}
+              <div
+                className="ghibli-card"
+                onClick={() => { setMetricDetailModal('max'); setSelectedDrillDate(null); }}
+                style={{ padding: 16, cursor: "pointer" }}
+              >
                 <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MAX PRODUCTIVITY 🐢</div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#99E3B4", marginTop: 4 }}>{overall.maxProdDays}</div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>≥ 90% completed</div>
               </div>
 
-              <div className="ghibli-card" style={{ padding: 16 }}>
+              {/* IN BETWEEN CARD (CLICKABLE FOR DRILLDOWN) */}
+              <div
+                className="ghibli-card"
+                onClick={() => { setMetricDetailModal('inBetween'); setSelectedDrillDate(null); }}
+                style={{ padding: 16, cursor: "pointer" }}
+              >
                 <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>IN BETWEEN 🐧</div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#F3C68F", marginTop: 4 }}>{overall.inBetweenDays}</div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>&gt; 50% &amp; &lt; 90%</div>
               </div>
 
-              <div className="ghibli-card" style={{ padding: 16, gridColumn: "span 2" }}>
+              {/* MIN PRODUCTIVITY CARD (CLICKABLE FOR DRILLDOWN) */}
+              <div
+                className="ghibli-card"
+                onClick={() => { setMetricDetailModal('min'); setSelectedDrillDate(null); }}
+                style={{ padding: 16, gridColumn: "span 2", cursor: "pointer" }}
+              >
                 <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MIN PRODUCTIVITY 🐇</div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#E86F88", marginTop: 4 }}>{overall.minProdDays}</div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>≤ 50% completed</div>
               </div>
             </div>
+
             {/* PROGRESS BAR */}
             <div className="ghibli-card" style={{ padding: 18, marginBottom: 20 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7, marginBottom: 24 }}>TODAY'S CLIMB</div>
@@ -1085,6 +1324,7 @@ export function StudyLedger() {
                 )}
               </div>
             </div>
+
             {/* LAST 7 DAYS */}
             <div className="ghibli-card" style={{ padding: 18, marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -1144,6 +1384,7 @@ export function StudyLedger() {
                 })}
               </div>
             </div>
+
             {/* NOTES PREVIEW */}
             <div className="ghibli-card" style={{ padding: 18, marginBottom: 20, cursor: "pointer" }} onClick={() => setShowNotesModal(true)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -1167,6 +1408,7 @@ export function StudyLedger() {
                 <ChevronRight size={24} />
               </button>
             </div>
+
             {/* TASK INPUT */}
             <div className="ghibli-card" style={{ padding: 18, marginBottom: 20 }}>
               <input
@@ -1207,7 +1449,8 @@ export function StudyLedger() {
                 </button>
               </div>
             </div>
-            {/* TASK LIST */}
+
+            {/* TASK LIST WITH ROLLOVER BUTTON FOR INCOMPLETE TASKS */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 30 }}>
               {currentTasks.map((t, index) => (
                 <div key={t.id} className="ghibli-card" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1236,9 +1479,33 @@ export function StudyLedger() {
                       )}
                     </div>
                   </div>
-                  <button onClick={() => removeTask(t.id)} style={{ background: "none", border: "none", opacity: 0.5, cursor: "pointer", color: "inherit" }}>
-                    <Trash2 size={16} />
-                  </button>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {/* ROLLOVER TO TOMORROW BUTTON (FOR INCOMPLETE / PENDING TASKS) */}
+                    {t.status !== "achieved" && (
+                      <button
+                        onClick={() => rolloverTaskToTomorrow(t)}
+                        className="ghibli-btn"
+                        style={{
+                          background: "rgba(255,255,255,0.12)",
+                          color: activeThemeObj.accent,
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          padding: "6px 12px",
+                          fontSize: 11,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4
+                        }}
+                        title="Rollover to Tomorrow"
+                      >
+                        Rollover <ArrowRight size={12} />
+                      </button>
+                    )}
+
+                    <button onClick={() => removeTask(t.id)} style={{ background: "none", border: "none", opacity: 0.5, cursor: "pointer", color: "inherit" }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1249,6 +1516,84 @@ export function StudyLedger() {
           </div>
         </div>
       </div>
+      {/* PRODUCTIVITY METRIC DETAIL MODAL (DRILLDOWN BY DATE & TASK LIST) */}
+      {metricDetailModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 500, padding: 24, display: "flex", flexDirection: "column", maxHeight: "80vh" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>
+                {metricDetailModal === 'max' && "Max Productivity Days (≥ 90%) 🐢"}
+                {metricDetailModal === 'inBetween' && "In Between Days (> 50% & < 90%) 🐧"}
+                {metricDetailModal === 'min' && "Min Productivity Days (≤ 50%) 🐇"}
+              </div>
+              <button onClick={() => setMetricDetailModal(null)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* LIST OF CONTRIBUTING DATES */}
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+              {(() => {
+                const dates = metricDetailModal === 'max' ? overall.maxDates : (metricDetailModal === 'inBetween' ? overall.inBetweenDates : overall.minDates);
+                if (dates.length === 0) {
+                  return <div style={{ opacity: 0.5, padding: 20, textAlign: "center" }}>No recorded days in this tier yet.</div>;
+                }
+                return dates.map((dateKey) => {
+                  const dObj = fromKey(dateKey);
+                  const isSelected = selectedDrillDate === dateKey;
+                  const dayTasks = tasksByDate[dateKey] || [];
+                  const achievedCount = dayTasks.filter(t => t.status === 'achieved').length;
+
+                  return (
+                    <div key={dateKey} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 14, overflow: "hidden" }}>
+                      <button
+                        onClick={() => setSelectedDrillDate(isSelected ? null : dateKey)}
+                        style={{
+                          width: "100%",
+                          padding: "12px 16px",
+                          background: "none",
+                          border: "none",
+                          color: "#FFF",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          fontSize: 14,
+                          fontWeight: 700
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Calendar size={15} color={activeThemeObj.accent} />
+                          <span>{dayLabel(dObj)} ({dateKey})</span>
+                        </div>
+                        <span style={{ fontSize: 12, opacity: 0.7 }}>
+                          {achievedCount} / {dayTasks.length} tasks
+                        </span>
+                      </button>
+
+                      {/* DRILLDOWN EXPANDED TASK LIST FOR SELECTED DATE */}
+                      {isSelected && (
+                        <div style={{ padding: "0 16px 14px", borderTop: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.2)" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, margin: "10px 0 6px" }}>LOGGED TASKS FOR THIS DATE:</div>
+                          {dayTasks.map((t, idx) => (
+                            <div key={t.id || idx} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                              <span>{t.status === 'achieved' ? '✅' : (t.status === 'missed' ? '❌' : '⏳')}</span>
+                              <span style={{ textDecoration: t.status === 'achieved' ? 'line-through' : 'none', opacity: t.status === 'achieved' ? 0.7 : 1 }}>
+                                {t.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
       {/* NOTES MODAL */}
       {showNotesModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 99, background: "rgba(20, 16, 28, 0.9)", backdropFilter: "blur(16px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1269,35 +1614,75 @@ export function StudyLedger() {
           </div>
         </div>
       )}
-      {/* NAAM JAAP MODAL */}
+
+      {/* NAAM JAAP MODAL WITH FULLY RESTORED STATS & 108 COUNT CHIME */}
       {showJaapModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="ghibli-card" style={{ width: "100%", maxWidth: 440, padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 480, padding: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
             <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Sparkles size={18} color="#F7C5CC" />
-                <span style={{ fontSize: 18, fontWeight: 800 }}>Naam Jaap</span>
+                <span style={{ fontSize: 18, fontWeight: 800 }}>Naam Jaap &amp; Stats</span>
               </div>
               <button onClick={() => setShowJaapModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
                 <X size={18} />
               </button>
             </div>
 
-            <div className="jaap-ring-btn" onClick={() => addJaapCount(1)} style={{ margin: "20px 0" }}>
+            {/* RING COUNTER BUTTON */}
+            <div className="jaap-ring-btn" onClick={() => addJaapCount(1)} style={{ margin: "14px 0 20px" }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", opacity: 0.8 }}>TAP COUNT</span>
-              <span style={{ fontSize: 44, fontWeight: 800 }}>{jaapData[todayKey] || 0}</span>
+              <span style={{ fontSize: 44, fontWeight: 800 }}>{jaapStats.todayJaap}</span>
               <span style={{ fontSize: 11, opacity: 0.8 }}>Today</span>
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
+            {/* ADD INCREMENT BUTTONS */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
               <button onClick={() => addJaapCount(1)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12 }}>+1</button>
               <button onClick={() => addJaapCount(11)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", fontSize: 12 }}>+11</button>
-              <button onClick={() => addJaapCount(108)} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#161521", padding: "8px 16px", fontSize: 12 }}>+108</button>
+              <button onClick={() => addJaapCount(108)} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#161521", padding: "8px 16px", fontSize: 12 }}>+108 🔔</button>
               <button onClick={() => addJaapCount(-1)} className="ghibli-btn" style={{ background: "rgba(255,255,255,0.06)", color: "#E86F88", padding: "8px 12px", fontSize: 12 }}>-1</button>
+            </div>
+
+            {/* FULL RESTORED STATS GRID */}
+            <div style={{
+              width: "100%",
+              background: "rgba(0,0,0,0.3)",
+              borderRadius: 20,
+              padding: 16,
+              boxSizing: "border-box",
+              border: "1px solid rgba(255,255,255,0.1)"
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", opacity: 0.7, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <BarChart2 size={14} color={activeThemeObj.accent} /> JAAP STATISTICS OVERVIEW
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ background: "rgba(255,255,255,0.06)", padding: "10px 12px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>Total All-Time</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#FFE885", marginTop: 2 }}>{jaapStats.totalAllTime}</div>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.06)", padding: "10px 12px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>Active Days</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#99E3B4", marginTop: 2 }}>{jaapStats.activeDays} days</div>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.06)", padding: "10px 12px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>Highest Day</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#F7C6B3", marginTop: 2 }}>{jaapStats.highestSingleDay}</div>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.06)", padding: "10px 12px", borderRadius: 12 }}>
+                  <div style={{ fontSize: 10, opacity: 0.6 }}>Daily Average</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#D7B9FF", marginTop: 2 }}>{jaapStats.averagePerDay}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
+
       {/* MONTH GOALS MODAL */}
       {showMonthGoalsModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -1353,10 +1738,11 @@ export function StudyLedger() {
           </div>
         </div>
       )}
-      {/* MUSIC PLAYER MODAL */}
+
+      {/* MUSIC PLAYER MODAL WITH TAB-BACKGROUND PLAY SUPPORT & SONG RENAMING */}
       {showMusicModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="ghibli-card" style={{ width: "100%", maxWidth: 420, padding: 24, textAlign: "center" }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 440, padding: 24, textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Music size={18} color={activeThemeObj.accent} />
@@ -1372,16 +1758,15 @@ export function StudyLedger() {
                 ref={audioRef}
                 src={playlist[currentTrackIdx]?.url}
                 onEnded={nextTrack}
-                preload="auto"
               />
             )}
 
-            <div style={{ padding: 20, background: "rgba(0,0,0,0.3)", borderRadius: 20, marginBottom: 20 }}>
+            <div style={{ padding: 16, background: "rgba(0,0,0,0.3)", borderRadius: 20, marginBottom: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
                 {playlist.length > 0 ? playlist[currentTrackIdx]?.name : "No tracks uploaded"}
               </div>
               <div style={{ fontSize: 11, opacity: 0.6 }}>
-                {playlist.length > 0 ? `Track ${currentTrackIdx + 1} of ${playlist.length}` : "Upload MP3 or audio files from storage"}
+                {playlist.length > 0 ? `Track ${currentTrackIdx + 1} of ${playlist.length}` : "Upload MP3 or audio files"}
               </div>
             </div>
 
@@ -1398,6 +1783,39 @@ export function StudyLedger() {
                 <ChevronRight size={20} />
               </button>
             </div>
+
+            {/* PLAYLIST WITH INLINE RENAMING */}
+            <div style={{ maxHeight: 160, overflowY: "auto", textAlign: "left", marginBottom: 20, display: "flex", flexDirection: "column", gap: 6 }}>
+              {playlist.map((track, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: idx === currentTrackIdx ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)", padding: "6px 12px", borderRadius: 10 }}>
+                  {editingTrackIdx === idx ? (
+                    <div style={{ display: "flex", gap: 6, flex: 1, marginRight: 8 }}>
+                      <input
+                        value={editingTrackName}
+                        onChange={(e) => setEditingTrackName(e.target.value)}
+                        className="kw-input"
+                        style={{ padding: "4px 8px", fontSize: 12, flex: 1 }}
+                      />
+                      <button onClick={() => saveTrackRename(idx)} className="ghibli-btn" style={{ background: activeThemeObj.accent, color: "#000", padding: "4px 10px", fontSize: 11 }}>Save</button>
+                    </div>
+                  ) : (
+                    <span
+                      onClick={() => { setCurrentTrackIdx(idx); setIsPlayingMusic(true); }}
+                      style={{ fontSize: 13, cursor: "pointer", fontWeight: idx === currentTrackIdx ? 700 : 400, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                    >
+                      {idx + 1}. {track.name}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => { setEditingTrackIdx(idx); setEditingTrackName(track.name); }}
+                    style={{ background: "none", border: "none", color: "#FFF", opacity: 0.6, cursor: "pointer", padding: 2 }}
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <label className="ghibli-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", color: "#FFF", padding: "10px 18px", fontSize: 13, cursor: "pointer" }}>
               <Upload size={16} /> Upload Audio Files
               <input type="file" accept="audio/*" multiple onChange={handleAudioUpload} style={{ display: "none" }} />
@@ -1405,10 +1823,11 @@ export function StudyLedger() {
           </div>
         </div>
       )}
-      {/* THEMES MODAL */}
+
+      {/* THEMES MODAL WITH CUSTOM WALLPAPER UPLOADER */}
       {showThemeModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(18, 14, 26, 0.92)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div className="ghibli-card" style={{ width: "100%", maxWidth: 440, padding: 24 }}>
+          <div className="ghibli-card" style={{ width: "100%", maxWidth: 460, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 18, fontWeight: 800 }}>Choose Aesthetic Theme</div>
               <button onClick={() => setShowThemeModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>
@@ -1416,7 +1835,7 @@ export function StudyLedger() {
               </button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
               {Object.values(THEMES).map((t) => (
                 <button
                   key={t.id}
@@ -1440,35 +1859,17 @@ export function StudyLedger() {
               ))}
             </div>
 
-            {/* Custom theme background uploader */}
-            {currentTheme === 'custom' && (
-              <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Custom Background</div>
-                <label className="ghibli-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", color: "#FFF", padding: "8px 14px", fontSize: 12, cursor: "pointer" }}>
-                  <Upload size={14} /> Choose Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const url = URL.createObjectURL(file);
-                      setCustomBgImage(url);
-                    }}
-                    style={{ display: "none" }}
-                  />
-                </label>
-                {customBgImage && (
-                  <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-                    Background set. You can re-upload to change it.
-                  </div>
-                )}
-              </div>
-            )}
+            {/* CUSTOM WALLPAPER FILE UPLOADER */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 16 }}>
+              <label className="ghibli-btn" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: activeThemeObj.accent, color: "#161521", padding: "12px", fontSize: 13, cursor: "pointer", boxSizing: "border-box" }}>
+                <Upload size={16} /> Upload Custom Background Image
+                <input type="file" accept="image/*" onChange={handleCustomBgUpload} style={{ display: "none" }} />
+              </label>
+            </div>
           </div>
         </div>
       )}
-      {/* VINTAGE BOOKS & PDF TRACKER MODAL */}
+      {/* VINTAGE BOOKS & NATIVE PDF TRACKER MODAL */}
       {showBooksModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(28, 22, 18, 0.95)", backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div className="ghibli-card" style={{
@@ -1509,11 +1910,13 @@ export function StudyLedger() {
                     <div key={b.id} style={{ background: "rgba(0,0,0,0.3)", padding: 16, borderRadius: 16, border: "1px solid #4A3A2C" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <div style={{ fontSize: 16, fontWeight: 700 }}>{b.title}</div>
+                        
+                        {/* OPENS DIRECTLY IN NATIVE BROWSER TAB WITHOUT DOWNLOAD FORCE */}
                         <button
-                          onClick={() => openPdfInBrowser(b.url)}
-                          style={{ background: "none", border: "none", color: "#C49A6C", cursor: "pointer", textDecoration: "underline", fontSize: 13 }}
+                          onClick={() => openPdfInNativeTab(b.url)}
+                          style={{ background: "#C49A6C", color: "#1E140C", border: "none", padding: "4px 10px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}
                         >
-                          Open PDF
+                          Open Native PDF Tab ↗
                         </button>
                       </div>
 
@@ -1545,141 +1948,7 @@ export function StudyLedger() {
           </div>
         </div>
       )}
-      {/* PRODUCTIVITY DATE DRILL-DOWN (below dashboard) */}
-      {selectedProductivityDateKey && (
-        <div style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 90,
-          background: "rgba(18, 14, 26, 0.96)",
-          backdropFilter: "blur(16px)",
-          borderTop: "1px solid rgba(255,255,255,0.15)",
-          padding: 16,
-          maxHeight: "40vh",
-          overflowY: "auto"
-        }}>
-          <div style={{ maxWidth: 600, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 800 }}>
-                Tasks on {fromKey(selectedProductivityDateKey).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </div>
-              <button
-                onClick={() => setSelectedProductivityDateKey(null)}
-                style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFF", borderRadius: "50%", width: 28, height: 28, cursor: "pointer" }}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {(tasksByDate[selectedProductivityDateKey] || []).map((t, i) => (
-                <div key={t.id} style={{
-                  background: "rgba(255,255,255,0.06)",
-                  padding: 10,
-                  borderRadius: 12
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, textDecoration: t.status === 'achieved' ? 'line-through' : 'none' }}>
-                    <span style={{ opacity: 0.5, marginRight: 6 }}>{i + 1}.</span>
-                    {t.text}
-                  </div>
-                  {(t.start || t.end) && (
-                    <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
-                      {t.start && t.end ? `${t.start} – ${t.end}` : t.start || t.end}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {(tasksByDate[selectedProductivityDateKey] || []).length === 0 && (
-                <div style={{ fontSize: 12, opacity: 0.5, textAlign: "center", padding: 12 }}>
-                  No tasks logged for this date.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-            {/* STREAK & METRICS (ENHANCED WITH DATE DRILL-DOWN) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-              <div className="ghibli-card" style={{ padding: 18, gridColumn: "span 2" }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Flame size={14} color="#E59866" /> STREAK
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 800, marginTop: 4, color: "#FFE885" }}>{streak}d</div>
-              </div>
-
-              <div className="ghibli-card" style={{ padding: 16, cursor: "pointer" }}
-                onClick={() => setSelectedProductivityDateKey(prodDates.maxDates[0] || null)}>
-                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MAX PRODUCTIVITY 🐢</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#99E3B4", marginTop: 4 }}>
-                  {overall.maxProdDays}
-                </div>
-                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>
-                  ≥ 90% completed {prodDates.maxDates.length > 0 && `• ${prodDates.maxDates.length} day${prodDates.maxDates.length > 1 ? 's' : ''}`}
-                </div>
-              </div>
-
-              <div className="ghibli-card" style={{ padding: 16, cursor: "pointer" }}
-                onClick={() => setSelectedProductivityDateKey(prodDates.inBetweenDates[0] || null)}>
-                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>IN BETWEEN 🐧</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#F3C68F", marginTop: 4 }}>
-                  {overall.inBetweenDays}
-                </div>
-                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>
-                  &gt; 50% &amp; &lt; 90% {prodDates.inBetweenDates.length > 0 && `• ${prodDates.inBetweenDates.length} day${prodDates.inBetweenDates.length > 1 ? 's' : ''}`}
-                </div>
-              </div>
-
-              <div className="ghibli-card" style={{ padding: 16, gridColumn: "span 2", cursor: "pointer" }}
-                onClick={() => setSelectedProductivityDateKey(prodDates.minDates[0] || null)}>
-                <div style={{ fontSize: 10, letterSpacing: "0.05em", fontWeight: 700, opacity: 0.7 }}>MIN PRODUCTIVITY 🐇</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#E86F88", marginTop: 4 }}>
-                  {overall.minProdDays}
-                </div>
-                <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>
-                  ≤ 50% completed {prodDates.minDates.length > 0 && `• ${prodDates.minDates.length} day${prodDates.minDates.length > 1 ? 's' : ''}`}
-                </div>
-              </div>
-            </div>
-      // Butterfly theme: click to spawn flying butterflies
-      const [butterflies, setButterflies] = useState([]);
-
-      useEffect(() => {
-        if (currentTheme !== 'butterfly') return;
-        const handleClick = (e) => {
-          // Ignore clicks inside modals/buttons to avoid clutter
-          if (e.target.closest('button') || e.target.closest('.ghibli-card')) return;
-          const id = Date.now() + Math.random();
-          const dx = (Math.random() * 200 - 100) + 'px';
-          const dy = (Math.random() * -200 - 100) + 'px';
-          setButterflies((prev) => [
-            ...prev,
-            { id, x: e.clientX, y: e.clientY, dx, dy }
-          ]);
-          // Remove after animation
-          setTimeout(() => {
-            setButterflies((prev) => prev.filter((b) => b.id !== id));
-          }, 2200);
-        };
-        document.addEventListener('click', handleClick);
-        return () => document.removeEventListener('click', handleClick);
-      }, [currentTheme]);
-      {/* BUTTERFLY CLICK-TO-SPAWN OVERLAY (only in butterfly theme) */}
-      {currentTheme === 'butterfly' && butterflies.map((b) => (
-        <div
-          key={b.id}
-          className="click-butterfly"
-          style={{
-            left: b.x,
-            top: b.y,
-            '--fly-dx': b.dx,
-            '--fly-dy': b.dy
-          }}
-        >
-          🦋
-        </div>
-      ))}
     </div>
   );
 }
@@ -1691,169 +1960,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 );
 
 export default StudyLedger;
-  // Mala 108-count audio/haptic cue
-  const lastJaapCountRef = useRef(0);
-  const bowlAudioRef = useRef(null);
-
-  useEffect(() => {
-    // Create a short, soft bowl/chime sound (royalty-free example URL)
-    const BOWL_SOUND_URL = 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_07e2a5c827.mp3?filename=meditation-bell-11126.mp3';
-    bowlAudioRef.current = new Audio(BOWL_SOUND_URL);
-    bowlAudioRef.current.volume = 0.5;
-    bowlAudioRef.current.preload = 'auto';
-  }, []);
-
-  useEffect(() => {
-    const currentCount = jaapData[todayKey] || 0;
-    const lastCount = lastJaapCountRef.current;
-
-    // Trigger on every 108 counts crossed (e.g., 108, 216, 324, ...)
-    if (currentCount > 0 && currentCount !== lastCount) {
-      const prevMod = Math.floor(lastCount / 108);
-      const currMod = Math.floor(currentCount / 108);
-      if (currMod > prevMod) {
-        // Play soft bowl sound
-        if (bowlAudioRef.current) {
-          bowlAudioRef.current.currentTime = 0;
-          bowlAudioRef.current.play().catch(() => {});
-        }
-        // Mobile vibration (if supported)
-        if (navigator.vibrate) {
-          navigator.vibrate([150, 80, 150]);
-        }
-      }
-      lastJaapCountRef.current = currentCount;
-    }
-  }, [jaapData, todayKey]);
-  const addTask = () => {
-    if (!newTaskText.trim()) return;
-    const newTask = {
-      id: Date.now().toString(),
-      text: newTaskText.trim(),
-      start: newStart,
-      end: newEnd,
-      status: 'pending',
-      rollover: false,        // new field
-      sourceDate: null        // new field (key of original day, if rolled over)
-    };
-    setTasksByDate((prev) => ({
-      ...prev,
-      [viewKey]: [...(prev[viewKey] || []), newTask]
-    }));
-    setNewTaskText('');
-    setNewStart('');
-    setNewEnd('');
-  };
-            {/* TASK LIST WITH ROLLOVER */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 30 }}>
-              {currentTasks.map((t, index) => {
-                const canRollover = t.status !== 'achieved';
-                return (
-                  <div key={t.id} className="ghibli-card" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button
-                        onClick={() => setStatus(t.id, "achieved")}
-                        style={{ background: t.status === "achieved" ? "#99E3B4" : "transparent", border: "2px solid #FFF", borderRadius: 8, width: 24, height: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        {t.status === "achieved" && <Check size={16} color="#FFF" />}
-                      </button>
-                      <button
-                        onClick={() => setStatus(t.id, "missed")}
-                        style={{ background: t.status === "missed" ? "#E86F88" : "transparent", border: "2px solid #FFF", borderRadius: 8, width: 24, height: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      >
-                        {t.status === "missed" && <X size={16} color="#FFF" />}
-                      </button>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 600, textDecoration: t.status === "achieved" ? "line-through" : "none", opacity: t.status === "achieved" ? 0.6 : 1 }}>
-                          <span style={{ opacity: 0.5, marginRight: 6 }}>{index + 1}.</span>
-                          {t.text}
-                        </div>
-                        {(t.start || t.end) && (
-                          <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
-                            {t.start && t.end ? `${t.start} – ${t.end}` : t.start || t.end}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {canRollover && (
-                        <button
-                          onClick={() => {
-                            const tomorrowKey = toKey(addDays(viewDate, 1));
-                            const rolledTask = {
-                              ...t,
-                              id: Date.now().toString(),
-                              status: 'pending',
-                              rollover: true,
-                              sourceDate: viewKey
-                            };
-                            setTasksByDate((prev) => ({
-                              ...prev,
-                              [tomorrowKey]: [...(prev[tomorrowKey] || []), rolledTask]
-                            }));
-                          }}
-                          className="ghibli-btn"
-                          style={{
-                            background: "rgba(255,255,255,0.12)",
-                            color: "#FFF",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            padding: "6px 10px",
-                            fontSize: 11
-                          }}
-                        >
-                          Rollover to Tomorrow
-                        </button>
-                      )}
-                      <button onClick={() => removeTask(t.id)} style={{ background: "none", border: "none", opacity: 0.5, cursor: "pointer", color: "inherit" }}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          {/* CAT THEME: ANIMATED CATS OVER CALENDAR */}
-          {currentTheme === 'cat' && (
-            <div style={{ position: "relative", marginTop: -10, marginBottom: 10, pointerEvents: "none" }}>
-              <div style={{ position: "absolute", top: -10, left: "10%", fontSize: 28, opacity: 0.9 }}>🐱</div>
-              <div style={{ position: "absolute", top: -20, right: "15%", fontSize: 24, opacity: 0.8 }}>🐾</div>
-              <div style={{ position: "absolute", bottom: -5, left: "25%", fontSize: 22, opacity: 0.7 }}>🧶</div>
-            </div>
-          )}
-      {/* BUTTERFLY THEME: VINTAGE BUTTERFLY BACKGROUND OVERLAY */}
-      {currentTheme === 'butterfly' && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: "none",
-          backgroundImage: "url('https://images.unsplash.com/photo-1509214624648-28e7a9a78e4a?auto=format&fit=crop&w=1920&q=80')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          opacity: 0.08,
-          filter: "sepia(0.6) contrast(1.1)"
-        }} />
-      )}
-{/* 100% COMPLETION CELEBRATION FALLING CONFETTI / STARS */}
-{overall.rate === 100 && currentTasks.length > 0 && (
-  <>
-    {[...Array(24)].map((_, i) => (
-      <div
-        key={`confetti-${i}`}
-        className="confetti-piece"
-        style={{
-          left: `${(i * 4.2) % 100}%`,
-          animationDelay: `${(i * 0.15) % 2.5}s`,
-          fontSize: `${16 + (i % 3) * 6}px`
-        }}
-      >
-        {["✨", "⭐", "🎉", "🌟", "💖", "🌸"][i % 6]}
-      </div>
-    ))}
-  </>
-)}
-
-
-
-
-
