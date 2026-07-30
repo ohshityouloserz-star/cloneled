@@ -2315,396 +2315,263 @@ function useAppState() {
     handleContainerClick
   };
 }
-// ============ MAIN APPLICATION DASHBOARD ============
+// ============ MAIN STUDY LEDGER COMPONENT ============
 
-export default function App() {
+export function StudyLedger() {
   const state = useAppState();
 
-  const {
-    // Data & Hooks
-    tasksByDate, setTasksByDate,
-    crossedDates, setCrossedDates,
-    jaapData, setJaapData,
-    notes, setNotes,
-    monthGoals, setMonthGoals,
-    books, setBooks,
-    playlist, setPlaylist,
-
-    // UI & Date State
-    viewDate, setViewDate, viewKey, today, todayKey, now,
-    calendarView, setCalendarView,
-    sevenDaysAnchor, setSevenDaysAnchor,
-    butterflies, currentTheme, setCurrentTheme,
-    customWallpaper, setCustomWallpaper,
-    selectedFont, setSelectedFont,
-
-    // Modals
-    showNotesModal, setShowNotesModal,
-    showJaapModal, setShowJaapModal,
-    showMonthGoalsModal, setShowMonthGoalsModal,
-    showMusicModal, setShowMusicModal,
-    showThemeModal, setShowThemeModal,
-    showBooksModal, setShowBooksModal,
-    metricDetailModal, setMetricDetailModal,
-
-    // Tasks
-    newTaskText, setNewTaskText,
-    newStart, setNewStart,
-    newEnd, setNewEnd,
-    currentTasks,
-
-    // Pomodoro
-    timerType, setTimerType,
-    focusHours, setFocusHours,
-    focusMins, setFocusMins,
-    breakHours, setBreakHours,
-    breakMins, setBreakMins,
-    pomoTime, setPomoTime,
-    pomoActive, setPomoActive,
-
-    // Music
-    currentTrackIdx, setCurrentTrackIdx,
-    isPlayingMusic, setIsPlayingMusic,
-
-    // Goals
-    newGoalText, setNewGoalText,
-
-    // Computed Props
-    activeThemeObj, weather, overall, streak, climberPct, last7Days,
-    handleContainerClick
-  } = state;
-
-  // Helper time formatters & handlers
-  const updateFocusTime = (h, m) => {
-    setFocusHours(h);
-    setFocusMins(m);
-    if (timerType === "focus") setPomoTime((h * 60 + m) * 60);
-  };
-
-  const updateBreakTime = (h, m) => {
-    setBreakHours(h);
-    setBreakMins(m);
-    if (timerType === "break") setPomoTime((h * 60 + m) * 60);
-  };
-
-  const switchTimerMode = (mode) => {
-    setPomoActive(false);
-    setTimerType(mode);
-    if (mode === "focus") {
-      setPomoTime((focusHours * 60 + focusMins) * 60);
-    } else {
-      setPomoTime((breakHours * 60 + breakMins) * 60);
-    }
-  };
-
   return (
-    <div
-      onClick={handleContainerClick}
+    <div 
+      onClick={state.handleContainerClick}
       style={{
+        fontFamily: FONTS[state.selectedFont]?.font || "sans-serif",
+        backgroundColor: state.activeThemeObj.bgColor,
         minHeight: "100vh",
-        backgroundColor: activeThemeObj.bgColor,
-        color: activeThemeObj.textColor,
-        fontFamily: activeThemeObj.font,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "20px 16px 40px",
-        boxSizing: "border-box",
+        color: state.activeThemeObj.textColor,
         position: "relative",
-        overflowX: "hidden"
+        overflowX: "hidden",
+        transition: "background-color 0.4s ease, color 0.4s ease, font-family 0.3s ease"
       }}
     >
-      {/* Background & Animations */}
-      <ThemeEffects
-        currentTheme={currentTheme}
-        activeThemeObj={activeThemeObj}
-        butterflies={butterflies}
-        onContainerClick={handleContainerClick}
+      <style>{getGlobalStyles(state.activeThemeObj)}</style>
+
+      {/* Theme Effects (Rain, Cat, Butterfly, Background) */}
+      <ThemeEffects 
+        currentTheme={state.currentTheme} 
+        activeThemeObj={state.activeThemeObj}
+        butterflies={state.butterflies}
+        onContainerClick={state.handleContainerClick}
       />
 
-      {/* Header Controls */}
-      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 480 }}>
-        <TopNavBar
-          now={now}
-          weather={weather}
-          jaapData={jaapData}
-          todayKey={todayKey}
-          showJaapModal={showJaapModal}
-          setShowJaapModal={setShowJaapModal}
-          showMusicModal={showMusicModal}
-          setShowMusicModal={setShowMusicModal}
-          showBooksModal={showBooksModal}
-          setShowBooksModal={setShowBooksModal}
-          showThemeModal={showThemeModal}
-          setShowThemeModal={setShowThemeModal}
-          activeThemeObj={activeThemeObj}
-        />
+      <div style={{ position: "relative", zIndex: 2 }}>
+        {/* TOP SECTION: Clock, Weather, Action Buttons */}
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "24px 16px 40px", boxSizing: "border-box" }}>
 
-        {/* Dynamic Title / Date Greeting */}
-        <div style={{ textAlign: "center", margin: "16px 0 24px" }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, textShadow: "0px 2px 10px rgba(0,0,0,0.4)" }}>
-            {dayLabel(viewDate)}
-          </h1>
-          <button
-            onClick={() => setShowNotesModal(true)}
-            style={{
-              background: "none",
-              border: "none",
-              color: activeThemeObj.accent,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginTop: 6,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4
-            }}
-          >
-            <Edit2 size={13} /> Open Daily Reflection Notes
-          </button>
+          {/* Top Navbar */}
+          <TopNavBar
+            now={state.now}
+            weather={state.weather}
+            jaapData={state.jaapData}
+            todayKey={state.todayKey}
+            showJaapModal={state.showJaapModal}
+            setShowJaapModal={state.setShowJaapModal}
+            showMusicModal={state.showMusicModal}
+            setShowMusicModal={state.setShowMusicModal}
+            showBooksModal={state.showBooksModal}
+            setShowBooksModal={state.setShowBooksModal}
+            showThemeModal={state.showThemeModal}
+            setShowThemeModal={state.setShowThemeModal}
+            activeThemeObj={state.activeThemeObj}
+          />
+
+          {/* Pomodoro Timer */}
+          <PomodoroTimer
+            focusHours={state.focusHours}
+            setFocusHours={state.setFocusHours}
+            focusMins={state.focusMins}
+            setFocusMins={state.setFocusMins}
+            breakHours={state.breakHours}
+            setBreakHours={state.setBreakHours}
+            breakMins={state.breakMins}
+            setBreakMins={state.setBreakMins}
+            timerType={state.timerType}
+            setTimerType={state.setTimerType}
+            pomoActive={state.pomoActive}
+            setPomoActive={state.setPomoActive}
+            pomoTime={state.pomoTime}
+            setPomoTime={state.setPomoTime}
+            activeThemeObj={state.activeThemeObj}
+          />
+
+          {/* Calendar */}
+          <CalendarSection
+            calendarView={state.calendarView}
+            setCalendarView={state.setCalendarView}
+            viewDate={state.viewDate}
+            setViewDate={state.setViewDate}
+            today={state.today}
+            tasksByDate={state.tasksByDate}
+            crossedDates={state.crossedDates}
+            setCrossedDates={state.setCrossedDates}
+            activeThemeObj={state.activeThemeObj}
+            onShowMonthGoals={() => state.setShowMonthGoalsModal(true)}
+          />
+
+          <div style={{ height: 10 }}></div>
         </div>
 
-        {/* Dashboard Progress & Metrics */}
-        <DashboardMetrics
-          streak={streak}
-          overall={overall}
-          climberPct={climberPct}
-          activeThemeObj={activeThemeObj}
-          onClickMetric={(type) => setMetricDetailModal(type)}
-        />
+        {/* DASHBOARD SECTION */}
+        <div style={{
+          background: "rgba(20, 16, 28, 0.95)",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+          minHeight: "100vh",
+          padding: "40px 16px 80px",
+          boxSizing: "border-box",
+          boxShadow: "0px -10px 40px rgba(0,0,0,0.5)"
+        }}>
+          <div style={{ maxWidth: 600, margin: "0 auto" }}>
 
-        {/* 7-Day Navigation Strip */}
-        <Last7Days
-          last7Days={last7Days}
-          viewKey={viewKey}
-          setViewDate={setViewDate}
-          activeThemeObj={activeThemeObj}
-          sevenDaysAnchor={sevenDaysAnchor}
-          setSevenDaysAnchor={setSevenDaysAnchor}
-        />
+            {/* Metrics & Streak */}
+            <DashboardMetrics
+              streak={state.streak}
+              overall={state.overall}
+              climberPct={state.climberPct}
+              activeThemeObj={state.activeThemeObj}
+              onClickMetric={(type) => state.setMetricDetailModal(type)}
+            />
 
-        {/* Pomodoro Timer */}
-        <div className="ghibli-card" style={{ padding: 20, marginBottom: 20, textAlign: "center" }}>
-          {/* Timer Switch */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16 }}>
-            <button
-              onClick={() => switchTimerMode("focus")}
-              className="ghibli-btn"
-              style={{
-                background: timerType === "focus" ? activeThemeObj.accent : "rgba(255,255,255,0.1)",
-                color: timerType === "focus" ? "#161521" : "#FFF",
-                padding: "6px 16px",
-                fontSize: 12
-              }}
-            >
-              Focus Mode
-            </button>
-            <button
-              onClick={() => switchTimerMode("break")}
-              className="ghibli-btn"
-              style={{
-                background: timerType === "break" ? "#99E3B4" : "rgba(255,255,255,0.1)",
-                color: timerType === "break" ? "#161521" : "#FFF",
-                padding: "6px 16px",
-                fontSize: 12
-              }}
-            >
-              Rest Mode
-            </button>
-          </div>
+            {/* Last 7 Days */}
+            <Last7Days
+              last7Days={state.last7Days}
+              viewKey={state.viewKey}
+              setViewDate={state.setViewDate}
+              activeThemeObj={state.activeThemeObj}
+              sevenDaysAnchor={state.sevenDaysAnchor}
+              setSevenDaysAnchor={state.setSevenDaysAnchor}
+            />
 
-          {/* Time Inputs */}
-          {timerType === "focus" ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>Set Focus:</span>
-              <input
-                type="number" min="0" max="24" value={focusHours}
-                onChange={(e) => updateFocusTime(Math.max(0, parseInt(e.target.value || 0, 10)), focusMins)}
-                className="time-num-input"
-              />
-              <span style={{ fontSize: 10, opacity: 0.8 }}>h</span>
-              <input
-                type="number" min="0" max="59" value={focusMins}
-                onChange={(e) => updateFocusTime(focusHours, Math.max(0, parseInt(e.target.value || 0, 10)))}
-                className="time-num-input"
-              />
-              <span style={{ fontSize: 10, opacity: 0.8 }}>m</span>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>Set Break:</span>
-              <input
-                type="number" min="0" max="24" value={breakHours}
-                onChange={(e) => updateBreakTime(Math.max(0, parseInt(e.target.value || 0, 10)), breakMins)}
-                className="time-num-input"
-              />
-              <span style={{ fontSize: 10, opacity: 0.8 }}>h</span>
-              <input
-                type="number" min="0" max="59" value={breakMins}
-                onChange={(e) => updateBreakTime(breakHours, Math.max(0, parseInt(e.target.value || 0, 10)))}
-                className="time-num-input"
-              />
-              <span style={{ fontSize: 10, opacity: 0.8 }}>m</span>
-            </div>
-          )}
-
-          {/* Breathing Cloud Animation & Timer Clock */}
-          <div style={{ position: "relative", display: "flex", justifyContent: "center", marginBottom: 12 }}>
-            <BreathingCloud accentColor={activeThemeObj.accent} />
-            <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)" }}>
-              <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: "0.04em", fontFamily: "monospace", textShadow: "0px 4px 20px rgba(0,0,0,0.6)", color: "#FFF" }}>
-                {formatPomoTime(pomoTime)}
+            {/* Notes Preview */}
+            <div className="ghibli-card" style={{ padding: 18, marginBottom: 20, cursor: "pointer" }} onClick={() => state.setShowNotesModal(true)}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7 }}>Daily Notes</div>
+                <Maximize2 size={14} opacity={0.6} />
+              </div>
+              <div style={{ fontSize: 13, opacity: state.notes ? 0.9 : 0.4, whiteSpace: "pre-wrap", maxHeight: 50, overflow: "hidden" }}>
+                {state.notes || "Click to add notes..."}
               </div>
             </div>
-          </div>
 
-          {/* Controls */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
-            <button
-              onClick={() => setPomoActive(!pomoActive)}
-              className="ghibli-btn"
-              style={{
-                background: timerType === "focus" ? activeThemeObj.accent : "#99E3B4",
-                color: "#161521",
-                width: 48,
-                height: 48,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0px 4px 16px rgba(0,0,0,0.4)"
-              }}
-            >
-              {pomoActive ? <Pause size={20} fill="#161521" /> : <Play size={20} fill="#161521" style={{ marginLeft: 2 }} />}
-            </button>
-            <button
-              onClick={() => switchTimerMode(timerType)}
-              className="ghibli-btn"
-              style={{
-                background: "rgba(0,0,0,0.3)",
-                color: "#FFF",
-                border: "1px solid rgba(255,255,255,0.2)",
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <RotateCcw size={16} />
-            </button>
-          </div>
+            {/* Day Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <button onClick={() => state.setViewDate((d) => addDays(d, -1))} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}>
+                <ChevronLeft size={24} />
+              </button>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>
+                {isSameDay(state.viewDate, state.today) ? "Today" : dayLabel(state.viewDate)}
+              </div>
+              <button onClick={() => state.setViewDate((d) => addDays(d, 1))} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}>
+                <ChevronRight size={24} />
+              </button>
+            </div>
 
-          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 16, fontStyle: "italic" }}>
-            {timerType === "focus" ? "🌿 Focus with intention, breathe with peace" : "✨ Rest restores the spirit"}
+            {/* Task Management */}
+            <TaskManagementSection
+              currentTasks={state.currentTasks}
+              viewKey={state.viewKey}
+              selectedDate={state.viewDate}
+              tasksByDate={state.tasksByDate}
+              setTasksByDate={state.setTasksByDate}
+              newTaskText={state.newTaskText}
+              setNewTaskText={state.setNewTaskText}
+              newStart={state.newStart}
+              setNewStart={state.setNewStart}
+              newEnd={state.newEnd}
+              setNewEnd={state.setNewEnd}
+              activeThemeObj={state.activeThemeObj}
+              onNavigateDate={state.setViewDate}
+            />
+
+            {/* Footer Doodle */}
+            <FooterDoodle activeThemeObj={state.activeThemeObj} />
           </div>
         </div>
-
-        {/* Task Management */}
-        <TaskManagementSection
-          currentTasks={currentTasks}
-          viewKey={viewKey}
-          selectedDate={viewDate}
-          tasksByDate={tasksByDate}
-          setTasksByDate={setTasksByDate}
-          newTaskText={newTaskText}
-          setNewTaskText={setNewTaskText}
-          newStart={newStart}
-          setNewStart={setNewStart}
-          newEnd={newEnd}
-          setNewEnd={setNewEnd}
-          activeThemeObj={activeThemeObj}
-          onNavigateDate={setViewDate}
-        />
-
-        {/* Interactive Monthly Calendar */}
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <CalendarSection
-            calendarView={calendarView}
-            setCalendarView={setCalendarView}
-            viewDate={viewDate}
-            setViewDate={setViewDate}
-            today={today}
-            tasksByDate={tasksByDate}
-            crossedDates={crossedDates}
-            setCrossedDates={setCrossedDates}
-            activeThemeObj={activeThemeObj}
-            onShowMonthGoals={() => setShowMonthGoalsModal(true)}
-          />
-        </div>
-
-        {/* Footer Doodle */}
-        <FooterDoodle activeThemeObj={activeThemeObj} />
       </div>
 
       {/* ============ MODALS ============ */}
+
+      {/* Notes Modal */}
       <NotesModal
-        isOpen={showNotesModal}
-        onClose={() => setShowNotesModal(false)}
-        notes={notes}
-        setNotes={setNotes}
-        activeThemeObj={activeThemeObj}
+        isOpen={state.showNotesModal}
+        onClose={() => state.setShowNotesModal(false)}
+        notes={state.notes}
+        setNotes={state.setNotes}
+        activeThemeObj={state.activeThemeObj}
       />
 
-      <JaapCounterModal
-        isOpen={showJaapModal}
-        onClose={() => setShowJaapModal(false)}
-        jaapData={jaapData}
-        setJaapData={setJaapData}
-        todayKey={todayKey}
-        activeThemeObj={activeThemeObj}
+      {/* Naam Jaap Modal */}
+      <NaamJaapCounter
+        isOpen={state.showJaapModal}
+        onClose={() => state.setShowJaapModal(false)}
+        jaapData={state.jaapData}
+        setJaapData={state.setJaapData}
+        todayKey={state.todayKey}
+        today={state.today}
+        selectedDate={state.viewDate}
+        tasksByDate={state.tasksByDate}
+        activeThemeObj={state.activeThemeObj}
       />
 
-      <MonthGoalsModal
-        isOpen={showMonthGoalsModal}
-        onClose={() => setShowMonthGoalsModal(false)}
-        monthGoals={monthGoals}
-        setMonthGoals={setMonthGoals}
-        calendarView={calendarView}
-        activeThemeObj={activeThemeObj}
-        newGoalText={newGoalText}
-        setNewGoalText={setNewGoalText}
-      />
-
+      {/* Music Player Modal */}
       <MusicPlayerModal
-        isOpen={showMusicModal}
-        onClose={() => setShowMusicModal(false)}
-        playlist={playlist}
-        setPlaylist={setPlaylist}
-        currentTrackIdx={currentTrackIdx}
-        setCurrentTrackIdx={setCurrentTrackIdx}
-        isPlayingMusic={isPlayingMusic}
-        setIsPlayingMusic={setIsPlayingMusic}
-        activeThemeObj={activeThemeObj}
+        isOpen={state.showMusicModal}
+        onClose={() => state.setShowMusicModal(false)}
+        playlist={state.playlist}
+        setPlaylist={state.setPlaylist}
+        currentTrackIdx={state.currentTrackIdx}
+        setCurrentTrackIdx={state.setCurrentTrackIdx}
+        isPlayingMusic={state.isPlayingMusic}
+        setIsPlayingMusic={state.setIsPlayingMusic}
+        activeThemeObj={state.activeThemeObj}
       />
 
+      {/* PDF Library Modal */}
       <PDFLibraryModal
-        isOpen={showBooksModal}
-        onClose={() => setShowBooksModal(false)}
-        books={books}
-        setBooks={setBooks}
-        activeThemeObj={activeThemeObj}
+        isOpen={state.showBooksModal}
+        onClose={() => state.setShowBooksModal(false)}
+        books={state.books}
+        setBooks={state.setBooks}
+        activeThemeObj={state.activeThemeObj}
       />
 
+      {/* Theme Customizer Modal */}
       <ThemeCustomizerModal
-        isOpen={showThemeModal}
-        onClose={() => setShowThemeModal(false)}
-        currentTheme={currentTheme}
-        setCurrentTheme={setCurrentTheme}
-        customWallpaper={customWallpaper}
-        setCustomWallpaper={setCustomWallpaper}
-        selectedFont={selectedFont}
-        setSelectedFont={setSelectedFont}
-        activeThemeObj={activeThemeObj}
+        isOpen={state.showThemeModal}
+        onClose={() => state.setShowThemeModal(false)}
+        currentTheme={state.currentTheme}
+        setCurrentTheme={state.setCurrentTheme}
+        customWallpaper={state.customWallpaper}
+        setCustomWallpaper={state.setCustomWallpaper}
+        selectedFont={state.selectedFont}
+        setSelectedFont={state.setSelectedFont}
+        activeThemeObj={state.activeThemeObj}
       />
 
+      {/* Month Goals Modal */}
+      <MonthGoalsModal
+        isOpen={state.showMonthGoalsModal}
+        onClose={() => state.setShowMonthGoalsModal(false)}
+        monthGoals={state.monthGoals}
+        setMonthGoals={state.setMonthGoals}
+        calendarView={state.calendarView}
+        activeThemeObj={state.activeThemeObj}
+        newGoalText={state.newGoalText}
+        setNewGoalText={state.setNewGoalText}
+      />
+
+      {/* Metric Detail Modal */}
       <MetricDetailModal
-        isOpen={Boolean(metricDetailModal)}
-        metricType={metricDetailModal}
-        onClose={() => setMetricDetailModal(null)}
-        overall={overall}
-        tasksByDate={tasksByDate}
-        activeThemeObj={activeThemeObj}
+        isOpen={state.metricDetailModal !== null}
+        metricType={state.metricDetailModal}
+        onClose={() => state.setMetricDetailModal(null)}
+        overall={state.overall}
+        tasksByDate={state.tasksByDate}
+        activeThemeObj={state.activeThemeObj}
       />
     </div>
   );
 }
+
+// ============ REACT DOM RENDER ============
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <StudyLedger />
+  </React.StrictMode>
+);
+
+export default StudyLedger;
+
+          
+              
+        
+        
