@@ -2489,3 +2489,396 @@ function useAppState() {
     handleContainerClick
   };
 }
+// ============ MAIN APPLICATION DASHBOARD ============
+
+export default function App() {
+  const state = useAppState();
+
+  const {
+    // Data & Hooks
+    tasksByDate, setTasksByDate,
+    crossedDates, setCrossedDates,
+    jaapData, setJaapData,
+    notes, setNotes,
+    monthGoals, setMonthGoals,
+    books, setBooks,
+    playlist, setPlaylist,
+
+    // UI & Date State
+    viewDate, setViewDate, viewKey, today, todayKey, now,
+    calendarView, setCalendarView,
+    sevenDaysAnchor, setSevenDaysAnchor,
+    butterflies, currentTheme, setCurrentTheme,
+    customWallpaper, setCustomWallpaper,
+    selectedFont, setSelectedFont,
+
+    // Modals
+    showNotesModal, setShowNotesModal,
+    showJaapModal, setShowJaapModal,
+    showMonthGoalsModal, setShowMonthGoalsModal,
+    showMusicModal, setShowMusicModal,
+    showThemeModal, setShowThemeModal,
+    showBooksModal, setShowBooksModal,
+    metricDetailModal, setMetricDetailModal,
+
+    // Tasks
+    newTaskText, setNewTaskText,
+    newStart, setNewStart,
+    newEnd, setNewEnd,
+    currentTasks,
+
+    // Pomodoro
+    timerType, setTimerType,
+    focusHours, setFocusHours,
+    focusMins, setFocusMins,
+    breakHours, setBreakHours,
+    breakMins, setBreakMins,
+    pomoTime, setPomoTime,
+    pomoActive, setPomoActive,
+
+    // Music
+    currentTrackIdx, setCurrentTrackIdx,
+    isPlayingMusic, setIsPlayingMusic,
+
+    // Goals
+    newGoalText, setNewGoalText,
+
+    // Computed Props
+    activeThemeObj, weather, overall, streak, climberPct, last7Days,
+    handleContainerClick
+  } = state;
+
+  // Helper time formatters & handlers
+  const updateFocusTime = (h, m) => {
+    setFocusHours(h);
+    setFocusMins(m);
+    if (timerType === "focus") setPomoTime((h * 60 + m) * 60);
+  };
+
+  const updateBreakTime = (h, m) => {
+    setBreakHours(h);
+    setBreakMins(m);
+    if (timerType === "break") setPomoTime((h * 60 + m) * 60);
+  };
+
+  const switchTimerMode = (mode) => {
+    setPomoActive(false);
+    setTimerType(mode);
+    if (mode === "focus") {
+      setPomoTime((focusHours * 60 + focusMins) * 60);
+    } else {
+      setPomoTime((breakHours * 60 + breakMins) * 60);
+    }
+  };
+
+  return (
+    <div
+      onClick={handleContainerClick}
+      style={{
+        minHeight: "100vh",
+        backgroundColor: activeThemeObj.bgColor,
+        color: activeThemeObj.textColor,
+        fontFamily: activeThemeObj.font,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "20px 16px 40px",
+        boxSizing: "border-box",
+        position: "relative",
+        overflowX: "hidden"
+      }}
+    >
+      {/* Background & Animations */}
+      <ThemeEffects
+        currentTheme={currentTheme}
+        activeThemeObj={activeThemeObj}
+        butterflies={butterflies}
+        onContainerClick={handleContainerClick}
+      />
+
+      {/* Header Controls */}
+      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 480 }}>
+        <TopNavBar
+          now={now}
+          weather={weather}
+          jaapData={jaapData}
+          todayKey={todayKey}
+          showJaapModal={showJaapModal}
+          setShowJaapModal={setShowJaapModal}
+          showMusicModal={showMusicModal}
+          setShowMusicModal={setShowMusicModal}
+          showBooksModal={showBooksModal}
+          setShowBooksModal={setShowBooksModal}
+          showThemeModal={showThemeModal}
+          setShowThemeModal={setShowThemeModal}
+          activeThemeObj={activeThemeObj}
+        />
+
+        {/* Dynamic Title / Date Greeting */}
+        <div style={{ textAlign: "center", margin: "16px 0 24px" }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, textShadow: "0px 2px 10px rgba(0,0,0,0.4)" }}>
+            {dayLabel(viewDate)}
+          </h1>
+          <button
+            onClick={() => setShowNotesModal(true)}
+            style={{
+              background: "none",
+              border: "none",
+              color: activeThemeObj.accent,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginTop: 6,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4
+            }}
+          >
+            <Edit2 size={13} /> Open Daily Reflection Notes
+          </button>
+        </div>
+
+        {/* Dashboard Progress & Metrics */}
+        <DashboardMetrics
+          streak={streak}
+          overall={overall}
+          climberPct={climberPct}
+          activeThemeObj={activeThemeObj}
+          onClickMetric={(type) => setMetricDetailModal(type)}
+        />
+
+        {/* 7-Day Navigation Strip */}
+        <Last7Days
+          last7Days={last7Days}
+          viewKey={viewKey}
+          setViewDate={setViewDate}
+          activeThemeObj={activeThemeObj}
+          sevenDaysAnchor={sevenDaysAnchor}
+          setSevenDaysAnchor={setSevenDaysAnchor}
+        />
+
+        {/* Pomodoro Timer */}
+        <div className="ghibli-card" style={{ padding: 20, marginBottom: 20, textAlign: "center" }}>
+          {/* Timer Switch */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16 }}>
+            <button
+              onClick={() => switchTimerMode("focus")}
+              className="ghibli-btn"
+              style={{
+                background: timerType === "focus" ? activeThemeObj.accent : "rgba(255,255,255,0.1)",
+                color: timerType === "focus" ? "#161521" : "#FFF",
+                padding: "6px 16px",
+                fontSize: 12
+              }}
+            >
+              Focus Mode
+            </button>
+            <button
+              onClick={() => switchTimerMode("break")}
+              className="ghibli-btn"
+              style={{
+                background: timerType === "break" ? "#99E3B4" : "rgba(255,255,255,0.1)",
+                color: timerType === "break" ? "#161521" : "#FFF",
+                padding: "6px 16px",
+                fontSize: 12
+              }}
+            >
+              Rest Mode
+            </button>
+          </div>
+
+          {/* Time Inputs */}
+          {timerType === "focus" ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>Set Focus:</span>
+              <input
+                type="number" min="0" max="24" value={focusHours}
+                onChange={(e) => updateFocusTime(Math.max(0, parseInt(e.target.value || 0, 10)), focusMins)}
+                className="time-num-input"
+              />
+              <span style={{ fontSize: 10, opacity: 0.8 }}>h</span>
+              <input
+                type="number" min="0" max="59" value={focusMins}
+                onChange={(e) => updateFocusTime(focusHours, Math.max(0, parseInt(e.target.value || 0, 10)))}
+                className="time-num-input"
+              />
+              <span style={{ fontSize: 10, opacity: 0.8 }}>m</span>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.9 }}>Set Break:</span>
+              <input
+                type="number" min="0" max="24" value={breakHours}
+                onChange={(e) => updateBreakTime(Math.max(0, parseInt(e.target.value || 0, 10)), breakMins)}
+                className="time-num-input"
+              />
+              <span style={{ fontSize: 10, opacity: 0.8 }}>h</span>
+              <input
+                type="number" min="0" max="59" value={breakMins}
+                onChange={(e) => updateBreakTime(breakHours, Math.max(0, parseInt(e.target.value || 0, 10)))}
+                className="time-num-input"
+              />
+              <span style={{ fontSize: 10, opacity: 0.8 }}>m</span>
+            </div>
+          )}
+
+          {/* Breathing Cloud Animation & Timer Clock */}
+          <div style={{ position: "relative", display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <BreathingCloud accentColor={activeThemeObj.accent} />
+            <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)" }}>
+              <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: "0.04em", fontFamily: "monospace", textShadow: "0px 4px 20px rgba(0,0,0,0.6)", color: "#FFF" }}>
+                {formatPomoTime(pomoTime)}
+              </div>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+            <button
+              onClick={() => setPomoActive(!pomoActive)}
+              className="ghibli-btn"
+              style={{
+                background: timerType === "focus" ? activeThemeObj.accent : "#99E3B4",
+                color: "#161521",
+                width: 48,
+                height: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0px 4px 16px rgba(0,0,0,0.4)"
+              }}
+            >
+              {pomoActive ? <Pause size={20} fill="#161521" /> : <Play size={20} fill="#161521" style={{ marginLeft: 2 }} />}
+            </button>
+            <button
+              onClick={() => switchTimerMode(timerType)}
+              className="ghibli-btn"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                color: "#FFF",
+                border: "1px solid rgba(255,255,255,0.2)",
+                width: 40,
+                height: 40,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <RotateCcw size={16} />
+            </button>
+          </div>
+
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 16, fontStyle: "italic" }}>
+            {timerType === "focus" ? "🌿 Focus with intention, breathe with peace" : "✨ Rest restores the spirit"}
+          </div>
+        </div>
+
+        {/* Task Management */}
+        <TaskManagementSection
+          currentTasks={currentTasks}
+          viewKey={viewKey}
+          selectedDate={viewDate}
+          tasksByDate={tasksByDate}
+          setTasksByDate={setTasksByDate}
+          newTaskText={newTaskText}
+          setNewTaskText={setNewTaskText}
+          newStart={newStart}
+          setNewStart={setNewStart}
+          newEnd={newEnd}
+          setNewEnd={setNewEnd}
+          activeThemeObj={activeThemeObj}
+          onNavigateDate={setViewDate}
+        />
+
+        {/* Interactive Monthly Calendar */}
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <CalendarSection
+            calendarView={calendarView}
+            setCalendarView={setCalendarView}
+            viewDate={viewDate}
+            setViewDate={setViewDate}
+            today={today}
+            tasksByDate={tasksByDate}
+            crossedDates={crossedDates}
+            setCrossedDates={setCrossedDates}
+            activeThemeObj={activeThemeObj}
+            onShowMonthGoals={() => setShowMonthGoalsModal(true)}
+          />
+        </div>
+
+        {/* Footer Doodle */}
+        <FooterDoodle activeThemeObj={activeThemeObj} />
+      </div>
+
+      {/* ============ MODALS ============ */}
+      <NotesModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        notes={notes}
+        setNotes={setNotes}
+        activeThemeObj={activeThemeObj}
+      />
+
+      <JaapCounterModal
+        isOpen={showJaapModal}
+        onClose={() => setShowJaapModal(false)}
+        jaapData={jaapData}
+        setJaapData={setJaapData}
+        todayKey={todayKey}
+        activeThemeObj={activeThemeObj}
+      />
+
+      <MonthGoalsModal
+        isOpen={showMonthGoalsModal}
+        onClose={() => setShowMonthGoalsModal(false)}
+        monthGoals={monthGoals}
+        setMonthGoals={setMonthGoals}
+        calendarView={calendarView}
+        activeThemeObj={activeThemeObj}
+        newGoalText={newGoalText}
+        setNewGoalText={setNewGoalText}
+      />
+
+      <MusicPlayerModal
+        isOpen={showMusicModal}
+        onClose={() => setShowMusicModal(false)}
+        playlist={playlist}
+        setPlaylist={setPlaylist}
+        currentTrackIdx={currentTrackIdx}
+        setCurrentTrackIdx={setCurrentTrackIdx}
+        isPlayingMusic={isPlayingMusic}
+        setIsPlayingMusic={setIsPlayingMusic}
+        activeThemeObj={activeThemeObj}
+      />
+
+      <PDFLibraryModal
+        isOpen={showBooksModal}
+        onClose={() => setShowBooksModal(false)}
+        books={books}
+        setBooks={setBooks}
+        activeThemeObj={activeThemeObj}
+      />
+
+      <ThemeCustomizerModal
+        isOpen={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+        currentTheme={currentTheme}
+        setCurrentTheme={setCurrentTheme}
+        customWallpaper={customWallpaper}
+        setCustomWallpaper={setCustomWallpaper}
+        selectedFont={selectedFont}
+        setSelectedFont={setSelectedFont}
+        activeThemeObj={activeThemeObj}
+      />
+
+      <MetricDetailModal
+        isOpen={Boolean(metricDetailModal)}
+        metricType={metricDetailModal}
+        onClose={() => setMetricDetailModal(null)}
+        overall={overall}
+        tasksByDate={tasksByDate}
+        activeThemeObj={activeThemeObj}
+      />
+    </div>
+  );
+}
